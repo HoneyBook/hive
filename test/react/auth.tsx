@@ -1,9 +1,16 @@
-import React, { createContext, useContext, useState } from "react";
+import React, {createContext, useContext} from "react";
+import {builderFor} from "ts-byob";
+import {faker} from "@faker-js/faker";
 
 export type User = {
     id: string;
     name: string;
 };
+
+export const aUser = builderFor<User>(() => ({
+    id: faker.string.uuid(),
+    name: faker.person.fullName()
+}))
 
 const AuthContext = createContext<{
     user: User | null;
