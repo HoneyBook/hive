@@ -1,12 +1,12 @@
-import { TestKit } from './test-kit';
-import { TestKitArrayToRecord } from './types';
+import { Kit } from './kit';
+import { KitArrayToRecord } from './types';
 
-export function buildTestKitRecordFromArray<TestKits extends TestKit[]>(
-    testKits: TestKit[]
+export function buildKitRecordFromArray<Kits extends Kit[]>(
+    kits: Kit[]
 ) {
-    return testKits.reduce((result, testKit) => {
-        result[testKit.name] = testKit;
+    return kits.reduce((result, kit) => {
+        result[kit.name] = kit;
 
         return result;
-    }, {} as TestKitArrayToRecord<TestKits>);
+    }, {} as KitArrayToRecord<Kits>);
 }

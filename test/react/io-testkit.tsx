@@ -1,4 +1,4 @@
-import {TestKit} from '../../src/test-kit';
+import {Kit} from '../../src/kit';
 import {aProduct, IOContextProvider, Product, ProductAdapter, UserProducts} from "./products";
 import React, {PropsWithChildren} from "react";
 import {AuthTestKit} from "./auth-testkit";
@@ -21,21 +21,21 @@ export class MemoryProductAdapter implements ProductAdapter {
 
 }
 
-export class IOTestKit extends TestKit{
+export class IOTestKit extends Kit {
   result = {
     productAdapter: new MemoryProductAdapter()
   }
 
   name = "IOTestKit";
 
-  get dependentTestKitsClasses() {
-    return [AuthTestKit];
+  constructor() {
+    super({dependentKitsClasses: [AuthTestKit]});
   }
 
   init() {
     const {
       AuthTestKit: { result: { user } }
-    } = this.getDependentTestKitsMap<[AuthTestKit]>();
+    } = this.getDependentKits<[AuthTestKit]>();
 
     this.result.productAdapter.products.set(user.id, [aProduct(), aProduct()]);
   }

@@ -1,8 +1,8 @@
-import {TestKit} from '../../src/test-kit';
+import React, {PropsWithChildren} from 'react';
+import {Kit} from '../../src/kit';
 import {aUser, AuthProvider, User} from "./auth";
-import React, {PropsWithChildren} from "react";
 
-export class AuthTestKit extends TestKit {
+export class AuthTestKit extends Kit {
     result: { user: User } = {user: aUser()};
 
     name = "AuthTestKit";
