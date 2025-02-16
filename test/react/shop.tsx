@@ -1,4 +1,6 @@
-import React, {Suspense, useId, useState} from "react";
+"use client";
+
+import React, {Suspense, useActionState, useId, useState} from "react";
 import {useProducts} from "./products";
 import {useUser} from "./auth";
 
@@ -8,6 +10,8 @@ export const Shop = () => {
     if (!user) {
         return <div>Please login</div>;
     }
+
+    console.log("rendering shop for user", user);
 
     return <div>
         <h1>{user.name}'s Shop</h1>
@@ -19,22 +23,26 @@ export const Shop = () => {
 
 const CreateProduct = () => {
     const {createProduct} = useProducts();
+    const [name, setName] = useState("");
+    const [price, setPrice] = useState("");
 
-    const handleSubmit = (formData: FormData) => {
-        createProduct({name: formData.get("name"), price: formData.get("price")});
+    const handleSubmit = () => {
+        createProduct({name, price});
+        setName("");
+        setPrice("");
     }
 
-    return <form action={handleSubmit}>
+    return <div>
         <label>
             Product Name
-            <input type="text" name="name"/>
+            <input type="text" name="name" onChange={(e) => setName(e.target.value)} value={name}/>
         </label>
         <label>
             Price
-            <input type="number" name="price"/>
+            <input type="number" name="price" onChange={(e) => setPrice(e.target.value)} value={price}/>
         </label>
-        <button type="submit">Create Product</button>
-    </form>
+        <button onClick={handleSubmit}>Create Product</button>
+    </div>
 }
 
 const Products = () => {
