@@ -1,15 +1,17 @@
 {
   "name": "@honeybook/hive-mock-adapter-jest",
   "version": "0.0.0",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./resolver": "./resolver.cjs"
   },
-  "files": ["dist"],
+  "files": ["dist", "resolver.cjs"],
   "publishConfig": { "access": "restricted" },
   "scripts": {
     "build": "rimraf dist && tsc -b",
@@ -24,6 +26,9 @@
     "jest": ">=29"
   },
   "devDependencies": {
+    "@types/jest": "30.0.0",
+    "@types/node": "26.0.1",
+    "jest": "30.2.0",
     "rimraf": "catalog:",
     "typescript": "6.0.3"
   }
