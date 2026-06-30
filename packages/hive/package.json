@@ -2,16 +2,18 @@
   "name": "@honeybook/hive",
   "version": "1.4.0",
   "description": "HoneyBook test kits infrastructure for building structured testing frameworks",
-  "main": "dist/index.js",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/index.js",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rimraf dist && tsc -b",
+    "build": "rimraf dist && tsc -b && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
     "dev": "tsc -b --watch",
     "clean": "rimraf dist",
     "test": "jest",
