@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+
+catalog:
+  lodash-es: 4.17.21
+  type-fest: 4.37.0
+  '@types/lodash': 4.14.195
+  rimraf: 4.4.1

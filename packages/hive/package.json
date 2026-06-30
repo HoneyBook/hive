@@ -1,0 +1,40 @@
+{
+  "name": "@honeybook/hive",
+  "version": "1.4.0",
+  "description": "HoneyBook test kits infrastructure for building structured testing frameworks",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rimraf dist && tsc -b",
+    "dev": "tsc -b --watch",
+    "clean": "rimraf dist",
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "lodash-es": "catalog:",
+    "type-fest": "catalog:"
+  },
+  "devDependencies": {
+    "@types/jest": "29.5.11",
+    "@types/lodash-es": "4.17.12",
+    "@types/lodash": "catalog:",
+    "jest": "29.6.1",
+    "rimraf": "catalog:",
+    "ts-jest": "29.4.11",
+    "typescript": "6.0.3"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

@@ -1,28 +1,26 @@
 {
-  "name": "@honeybook/hive",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "name": "honeybook-hive",
+  "private": true,
+  "version": "0.0.0",
+  "engines": {
+    "node": "~24"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "packageManager": "pnpm@10.20.0+sha512.cf9998222162dd85864d0a8102e7892e7ba4ceadebbf5a31f9c2fce48dfce317a9c53b9f6464d1ef9042cba2e02ae02a9f7c143a2b438cd93c91840f0192b9dd",
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean"
+  },
   "devDependencies": {
-    "@faker-js/faker": "^9.5.0",
-    "@tanstack/react-query": "^5.66.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/react": "^19.0.9",
-    "axios": "^1.7.9",
-    "jsdom": "^26.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "ts-byob": "^1.0.3",
-    "type-fest": "^4.34.1",
-    "typescript": "^5.7.3",
-    "vitest": "^3.0.5"
+    "@eslint/js": "9.31.0",
+    "eslint": "9.31.0",
+    "eslint-plugin-import": "2.32.0",
+    "globals": "16.3.0",
+    "rimraf": "4.4.1",
+    "turbo": "2.8.14",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.59.1"
   }
 }
