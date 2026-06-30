@@ -31,6 +31,16 @@ export type TemporalRunnerConfig = {
 // runners sharing one TestWorkflowEnvironment never collide.
 let runnerCounter = 0;
 
+type ExecuteThis = {
+  run(): Promise<void>;
+  testKits: TestKit[];
+  testKitsMap: {
+    TemporalTestKit: TemporalTestKit;
+    TemporalConfigTestKit: TemporalConfigTestKit;
+  } & Record<string, TestKit>;
+  result: CombinedTestKitsResult<InstanceType<TemporalBaseKits[number]>[]>;
+};
+
 export const createTemporalTestRunner: RunnerFactory<
   TemporalBaseKits,
   TemporalHandle,
@@ -44,18 +54,10 @@ export const createTemporalTestRunner: RunnerFactory<
     beforeEach(config.onReset);
   }
 
-  type ExecuteThis = {
-    run(): Promise<void>;
-    testKits: TestKit[];
-    testKitsMap: {
-      TemporalTestKit: TemporalTestKit;
-      TemporalConfigTestKit: TemporalConfigTestKit;
-    } & Record<string, TestKit>;
-    result: CombinedTestKitsResult<InstanceType<TemporalBaseKits[number]>[]>;
-  };
-
-  const execute: ((this: ExecuteThis) => Promise<TemporalHandle>) & ThisType<ExecuteThis> =
-    async function (this: ExecuteThis) {
+  // Object-literal context is required for ThisType<> to apply contextual this-typing
+  // to the method body. Standalone function expressions do not benefit from ThisType<>.
+  const executeHolder: { execute(): Promise<TemporalHandle> } & ThisType<ExecuteThis> = {
+    async execute() {
       const testEnv = this.testKitsMap.TemporalTestKit.result.testEnv;
       const cfg = this.testKitsMap.TemporalConfigTestKit.result;
       const prefix = cfg.taskQueuePrefix;
@@ -122,7 +124,8 @@ export const createTemporalTestRunner: RunnerFactory<
       }
 
       return handle;
-    };
+    },
+  };
 
-  return createBaseTestRunner(allKits, extraMethods as any, execute as any) as any;
+  return createBaseTestRunner(allKits, extraMethods as any, executeHolder.execute as any) as any;
 };
