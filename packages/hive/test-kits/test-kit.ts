@@ -4,7 +4,7 @@ import { TestKitArrayToRecord, DependsOn } from './test-kits.types';
 /** A test kit describe the way of how building a test data for a module and provide the tools to ask the questions on that module. */
 export abstract class TestKit<Dependencies extends Array<TestKit> = any[]> {
     protected dependentTestKits: Array<TestKit> = [];
-    protected _dependentTestKitsMap!: TestKitArrayToRecord<Dependencies>;
+    protected _dependentTestKitsMap: TestKitArrayToRecord<Dependencies> = {} as TestKitArrayToRecord<Dependencies>;
 
     /**
      * Backward-compat overload: explicit type param still accepted at call sites.
@@ -84,7 +84,11 @@ export abstract class TestKit<Dependencies extends Array<TestKit> = any[]> {
     }
 
     defaultInit() {
-        this.callWith(this.defaultCallback!, []);
+        const callback = this.defaultCallback;
+        if (callback === undefined) {
+            throw new Error(`TestKit ${this.constructor.name} does not have a defaultCallback`);
+        }
+        this.callWith(callback, []);
     }
 
     callWith(withMethod: (...args: any[]) => any, props: any[]) {
