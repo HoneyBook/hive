@@ -1,0 +1,17 @@
+{
+  "name": "@honeybook/hive-example-vitest",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@honeybook/hive-mock-adapter-vitest": "workspace:*",
+    "@types/node": "26.0.1",
+    "rimraf": "catalog:",
+    "typescript": "6.0.3",
+    "vitest": "4.1.9"
+  }
+}

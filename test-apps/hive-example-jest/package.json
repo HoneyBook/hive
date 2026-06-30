@@ -1,0 +1,19 @@
+{
+  "name": "@honeybook/hive-example-jest",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@honeybook/hive-mock-adapter-jest": "workspace:*",
+    "@types/jest": "30.0.0",
+    "@types/node": "26.0.1",
+    "jest": "30.2.0",
+    "rimraf": "catalog:",
+    "ts-jest": "29.4.5",
+    "typescript": "6.0.3"
+  }
+}
