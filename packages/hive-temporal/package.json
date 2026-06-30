@@ -12,17 +12,23 @@
   "files": ["dist"],
   "publishConfig": { "access": "restricted" },
   "scripts": {
-    "build": "rimraf dist && tsc -b",
+    "build": "rimraf dist && tsc -b tsconfig.build.json",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "jest"
   },
   "dependencies": {
+    "@honeybook/hive": "workspace:*",
     "@honeybook/hive-runner": "workspace:*",
     "@temporalio/testing": "1.18.1"
   },
   "devDependencies": {
+    "@temporalio/worker": "1.18.1",
+    "@types/jest": "30.0.0",
+    "jest": "30.2.0",
     "rimraf": "catalog:",
+    "ts-jest": "29.4.5",
     "typescript": "6.0.3"
   }
 }
