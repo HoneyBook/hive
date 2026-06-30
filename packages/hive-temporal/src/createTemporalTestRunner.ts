@@ -62,40 +62,49 @@ export const createTemporalTestRunner: RunnerFactory<
       const cfg = this.testKitsMap.TemporalConfigTestKit.result;
       const prefix = cfg.taskQueuePrefix;
 
-      const workflowsPath = cfg.workflowsPath;
-      const childWorkflowsPath = cfg.childWorkflowsPath;
+      // Worker creation is triggered by either a path (bundled at runtime) or a
+      // pre-compiled bundle (via withWorkflowBundle — faster, recommended for tests).
+      const hasMain = cfg.workflowsPath != null || cfg.workflowBundle != null;
+      const hasChild = cfg.childWorkflowsPath != null || cfg.childWorkflowBundle != null;
 
       const taskQueue = `${prefix}-${++runnerCounter}`;
 
       let childTaskQueue: string | undefined;
-      if (childWorkflowsPath) {
+      if (hasChild) {
         childTaskQueue = `${prefix}-child-${++runnerCounter}`;
       }
 
-      if (workflowsPath) {
+      if (hasMain) {
         const testActivities = cfg.activities ?? {};
         // Auto-inject resolveTaskQueue when child workflows are in use; test-supplied
         // activities take precedence (spread after the default).
         const mainActivities = childTaskQueue
           ? { resolveTaskQueue: async () => childTaskQueue as string, ...testActivities }
           : testActivities;
+        const mainWorkerConfig = cfg.workflowBundle
+          ? { workflowBundle: cfg.workflowBundle }
+          : { workflowsPath: cfg.workflowsPath! };
         const worker = await Worker.create({
           connection: testEnv.nativeConnection,
           taskQueue,
           namespace: 'default',
-          workflowsPath,
+          ...mainWorkerConfig,
           activities: mainActivities,
         });
         void worker.run().catch(console.error);
         afterAll(() => worker.shutdown());
       }
 
-      if (childWorkflowsPath && childTaskQueue) {
+      if (hasChild && childTaskQueue) {
+        // childWorkflowBundle takes precedence; falls back to childWorkflowsPath.
+        const childWorkerConfig = cfg.childWorkflowBundle
+          ? { workflowBundle: cfg.childWorkflowBundle }
+          : { workflowsPath: cfg.childWorkflowsPath! };
         const childWorker = await Worker.create({
           connection: testEnv.nativeConnection,
           taskQueue: childTaskQueue,
           namespace: 'default',
-          workflowsPath: childWorkflowsPath,
+          ...childWorkerConfig,
           activities: {},
         });
         void childWorker.run().catch(console.error);

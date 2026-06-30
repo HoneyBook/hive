@@ -21,10 +21,11 @@
   "dependencies": {
     "@honeybook/hive": "workspace:*",
     "@honeybook/hive-runner": "workspace:*",
-    "@temporalio/testing": "1.18.1"
+    "@temporalio/testing": "1.18.1",
+    "@temporalio/worker": "1.18.1"
   },
   "devDependencies": {
-    "@temporalio/worker": "1.18.1",
+    "@temporalio/workflow": "1.18.1",
     "@types/jest": "30.0.0",
     "jest": "30.2.0",
     "rimraf": "catalog:",
