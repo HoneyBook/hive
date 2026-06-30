@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "." },
+  "include": ["index.ts"],
+  "references": [{ "path": "../hive-mock-adapter" }]
+}

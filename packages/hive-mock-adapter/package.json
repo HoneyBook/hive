@@ -1,0 +1,24 @@
+{
+  "name": "@honeybook/hive-mock-adapter",
+  "version": "0.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": { "access": "restricted" },
+  "scripts": {
+    "build": "rimraf dist && tsc -b",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "rimraf": "catalog:",
+    "typescript": "6.0.3"
+  }
+}
