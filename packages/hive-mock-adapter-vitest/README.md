@@ -35,13 +35,22 @@ export default defineConfig({
 
 ### 2. Setup file
 
-In `src/setup.ts`:
+Add the package's setup file to `vitest.config.ts` — it registers `afterEach(() => cleanupMockAdapters())` automatically:
+
+```ts
+test: {
+  setupFiles: ["@honeybook/hive-mock-adapter-vitest/setup", "./src/setup.ts"],
+  clearMocks: true,
+},
+```
+
+Or register manually in your own setup file if you prefer:
 
 ```ts
 import { cleanupMockAdapters } from "@honeybook/hive-mock-adapter-vitest";
-import { beforeEach } from "vitest";
+import { afterEach } from "vitest";
 
-beforeEach(() => cleanupMockAdapters());
+afterEach(() => cleanupMockAdapters());
 ```
 
 ### 3. Create a mock adapter

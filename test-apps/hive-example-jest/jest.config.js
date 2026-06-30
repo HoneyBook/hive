@@ -20,6 +20,6 @@ module.exports = {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   resolver: require.resolve('./jest-resolver.cjs'),
-  setupFilesAfterEnv: ['<rootDir>/src/setup.ts'],
+  setupFilesAfterEnv: ['@honeybook/hive-mock-adapter-jest/setup'],
   clearMocks: true,
 };

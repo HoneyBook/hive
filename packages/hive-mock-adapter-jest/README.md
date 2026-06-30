@@ -55,12 +55,18 @@ module.exports = {
 
 ### 2. Setup file
 
-In `src/setup.ts`:
+Add the package's setup file to `jest.config.js` — it registers `afterEach(() => cleanupMockAdapters())` automatically:
+
+```js
+setupFilesAfterEnv: ["@honeybook/hive-mock-adapter-jest/setup"],
+```
+
+Or register manually in your own setup file if you prefer:
 
 ```ts
 import { cleanupMockAdapters } from "@honeybook/hive-mock-adapter-jest";
 
-beforeEach(() => cleanupMockAdapters());
+afterEach(() => cleanupMockAdapters());
 ```
 
 ### 3. Create a mock adapter

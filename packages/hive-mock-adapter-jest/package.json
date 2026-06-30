@@ -11,6 +11,11 @@
       "require": "./dist/cjs/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./setup": {
+      "import": "./dist/src/setup.js",
+      "require": "./dist/cjs/src/setup.js",
+      "types": "./dist/src/setup.d.ts"
+    },
     "./resolver": "./resolver.cjs"
   },
   "files": ["dist", "resolver.cjs"],

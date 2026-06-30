@@ -4,7 +4,7 @@ import { mockSubstitutionPlugin } from "@honeybook/hive-mock-adapter-vitest";
 export default defineConfig({
   plugins: [mockSubstitutionPlugin({ paths: ["src/**/*.mock.ts"] })],
   test: {
-    setupFiles: ["./src/setup.ts"],
+    setupFiles: ["@honeybook/hive-mock-adapter-vitest/setup"],
     clearMocks: true,
   },
 });
