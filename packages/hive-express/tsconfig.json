@@ -1,6 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist", "rootDir": "." },
-  "include": ["index.ts"],
-  "references": [{ "path": "../hive-runner" }]
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "types": ["jest"]
+  },
+  "include": ["index.ts", "src/**/*.ts", "__tests__/**/*.ts"],
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    { "path": "../hive" },
+    { "path": "../hive-runner" }
+  ]
 }
