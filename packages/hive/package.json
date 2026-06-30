@@ -26,12 +26,12 @@
     "type-fest": "catalog:"
   },
   "devDependencies": {
-    "@types/jest": "29.5.11",
+    "@types/jest": "30.0.0",
     "@types/lodash-es": "4.17.12",
     "@types/lodash": "catalog:",
-    "jest": "29.6.1",
+    "jest": "30.2.0",
     "rimraf": "catalog:",
-    "ts-jest": "29.4.11",
+    "ts-jest": "29.4.5",
     "typescript": "6.0.3"
   },
   "publishConfig": {

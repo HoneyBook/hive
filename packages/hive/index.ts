@@ -6,6 +6,7 @@
 
 // Base classes
 export { TestKit } from './test-kits/test-kit';
+export { AsyncTestKit } from './test-kits/async-test-kit';
 export { TestAppRunner, createAppRunner } from './app-runner/test-app-runner';
 
 // Utilities
