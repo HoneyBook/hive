@@ -5,6 +5,7 @@
     "typecheck": { "dependsOn": ["^build"] },
     "lint": {},
     "test": { "dependsOn": ["^build"] },
-    "clean": { "cache": false }
+    "clean": { "cache": false },
+    "format:check": {}
   }
 }
