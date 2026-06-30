@@ -35,5 +35,7 @@ export const createExpressTestRunner: RunnerFactory<
     return { request: agent };
   };
 
+  // RunnerFactory outer annotation specialises BaseKits + ExecuteFn; createBaseTestRunner's
+  // inner generics don't unify with them directly — same pattern as createReactTestRunner.
   return createBaseTestRunner(allKits, extraMethods as any, execute as any) as any;
 };
