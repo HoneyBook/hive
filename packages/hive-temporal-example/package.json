@@ -1,0 +1,20 @@
+{
+  "name": "@honeybook/hive-temporal-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@honeybook/hive-temporal": "workspace:*",
+    "@temporalio/testing": "1.18.1",
+    "@temporalio/worker": "1.18.1",
+    "@temporalio/workflow": "1.18.1"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vitest": "^4.0.18"
+  }
+}
