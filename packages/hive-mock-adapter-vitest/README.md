@@ -19,7 +19,13 @@ import { defineConfig } from "vitest/config";
 import { mockSubstitutionPlugin } from "@honeybook/hive-mock-adapter-vitest";
 
 export default defineConfig({
-  plugins: [mockSubstitutionPlugin({ paths: ["src/**/*.mock.ts"] })],
+  plugins: [
+    mockSubstitutionPlugin({
+      paths: ["src/**/*.mock.ts"],
+      // aliases: map package names to test-only replacements, e.g.:
+      // aliases: { "@honeybook/some-sdk": "./src/testing/some-sdk.mock.ts" }
+    }),
+  ],
   test: {
     setupFiles: ["./src/setup.ts"],
     clearMocks: true,

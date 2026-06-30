@@ -1,3 +1,9 @@
+// Why both moduleNameMapper and a custom resolver?
+// The custom resolver intercepts TypeScript paths at jest's resolve step and redirects
+// real modules to their .mock.ts counterparts. moduleNameMapper runs before resolution
+// and strips .js extensions so that ESM workspace packages (which emit .js imports)
+// resolve back to their TypeScript sources — without it, ts-jest never sees the .ts
+// files and the resolver has nothing to redirect.
 module.exports = {
   testEnvironment: 'node',
   transform: {

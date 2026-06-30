@@ -1,6 +1,16 @@
-// CJS shim — loaded by jest via require.resolve; re-implements the resolver in CJS
+// CJS shim for the built-in jest resolver — published as the `./resolver` subpath export.
+// This file exists because jest resolvers must be requireable (CJS); the TS implementation
+// in src/mockSubstitutionResolver.ts is the ESM source, but jest.config.js (CJS) cannot
+// load it directly via require.resolve. This shim duplicates only the default sibling-resolver
+// behavior. For __mocks__/ support, compose resolvers in your own jest-resolver.cjs file:
+//
+//   const { siblingMockResolver, mocksDirResolver } = require('@honeybook/hive-mock-adapter-jest');
+//   module.exports = function(request, options) {
+//     const real = options.defaultResolver(request, options);
+//     if (!real.endsWith('.ts') && !real.endsWith('.tsx')) return real;
+//     return siblingMockResolver(real) ?? mocksDirResolver(real) ?? real;
+//   };
 const { existsSync } = require('node:fs');
-const path = require('node:path');
 
 function siblingMockResolver(realPath) {
   const match = realPath.match(/^(.*)\.(tsx?)$/);
@@ -10,16 +20,8 @@ function siblingMockResolver(realPath) {
   return null;
 }
 
-function mocksDirResolver(realPath) {
-  const dir = path.dirname(realPath);
-  const filename = realPath.slice(dir.length + 1);
-  const candidate = path.resolve(dir, '__mocks__', filename);
-  if (existsSync(candidate)) return candidate;
-  return null;
-}
-
 module.exports = function mockSubstitutionResolver(request, options) {
   const real = options.defaultResolver(request, options);
   if (!real.endsWith('.ts') && !real.endsWith('.tsx')) return real;
-  return siblingMockResolver(real) ?? mocksDirResolver(real) ?? real;
+  return siblingMockResolver(real) ?? real;
 };

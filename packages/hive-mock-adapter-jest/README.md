@@ -2,6 +2,12 @@
 
 Jest integration for `@honeybook/hive-mock-adapter`. Provides a transparent singleton mock-adapter pattern with automatic spy registration and a Jest resolver for zero-config mock file substitution.
 
+## Why use this?
+
+Instead of reaching for `jest.mock()` or `jest.spyOn()` at the call site, `MockAdapter` wraps a class once — at definition time — and gives every test the same singleton instance with all methods already spied. Between tests, `cleanupMockAdapters()` calls `reset()` on the instance in place (never replaces it), so backend module-level singletons that capture the adapter at import time always have a live reference pointing at the same object.
+
+For more info on the adapter pattern and why we use it, read: <!-- link to atlas-service adapter pattern doc -->
+
 ## Installation
 
 ```bash
@@ -12,7 +18,7 @@ pnpm add -D @honeybook/hive-mock-adapter-jest jest @types/jest ts-jest
 
 ### 1. Configure Jest resolver
 
-In `jest.config.js`:
+In `jest.config.js`, use the built-in resolver (`.mock.ts` sibling substitution only):
 
 ```js
 module.exports = {
@@ -20,13 +26,13 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', { diagnostics: false }]
   },
-  resolver: require.resolve('./jest-resolver.cjs'),
+  resolver: require.resolve('@honeybook/hive-mock-adapter-jest/resolver'),
   setupFilesAfterEnv: ['<rootDir>/src/setup.ts'],
   clearMocks: true,
 };
 ```
 
-Create `jest-resolver.cjs` in your project root:
+To also support `__mocks__/` directory substitution, compose resolvers in your own `jest-resolver.cjs`:
 
 ```js
 const { siblingMockResolver, mocksDirResolver } = require('@honeybook/hive-mock-adapter-jest');
@@ -38,11 +44,11 @@ module.exports = function(request, options) {
 };
 ```
 
-Or use the built-in resolver directly:
+Then point jest at it:
 
 ```js
 module.exports = {
-  resolver: require.resolve('@honeybook/hive-mock-adapter-jest/resolver'),
+  resolver: require.resolve('./jest-resolver.cjs'),
   // ...
 };
 ```
@@ -100,4 +106,4 @@ it("has spied greet method", () => {
 - `cleanupMockAdapters()` — calls `reset()` on all registered mock adapters
 - `IMockAdapter<T>` — type helper for declaring mock adapter interfaces
 
-The package also exports a ready-to-use CJS resolver at `@honeybook/hive-mock-adapter-jest/resolver`.
+The package exports a ready-to-use CJS resolver at `@honeybook/hive-mock-adapter-jest/resolver` (`.mock.ts` sibling only). Compose `siblingMockResolver` and `mocksDirResolver` yourself when you need both conventions.
