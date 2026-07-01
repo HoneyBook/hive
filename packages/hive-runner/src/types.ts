@@ -99,14 +99,21 @@ export type RunnerFactory<
   PlatformArg = never,
 > = <
   KitsClasses extends KitClassArray,
-  ExtraMethods extends Record<string, (...args: any[]) => unknown> = NoMethods,
+  // Defaults directly to Record<never, never> (not NoMethods/never + ResolveNever) —
+  // ExtraMethods is inferred per-call from the extraMethods argument, and feeding a
+  // conditional type built FROM ExtraMethods back into that same argument's ThisType
+  // silently defeats bidirectional inference (TS falls back to the default instead of
+  // inferring from the object literal, with no compile error). ExecuteFn/BaseMethods
+  // don't have this problem — they're fixed by the named factory's own RunnerFactory<...>
+  // instantiation, not inferred per end-caller.
+  ExtraMethods extends Record<string, (...args: any[]) => unknown> = Record<never, never>,
 >(
   kits: KitsClasses,
   extraMethods?: ExtraMethods &
     ThisType<
       AppRunnerWithExtraMethods<
         [...BaseKits, ...KitsClasses],
-        ResolveNever<ExtraMethods, Record<never, never>>,
+        ExtraMethods,
         ResolveNever<ExecuteFn, Record<never, never>>
       > &
         ResolveNever<BaseMethods, Record<never, never>>
@@ -114,7 +121,7 @@ export type RunnerFactory<
   ...rest: PlatformArgs<PlatformArg>
 ) => AppRunnerWithExtraMethods<
   [...BaseKits, ...KitsClasses],
-  ResolveNever<ExtraMethods, Record<never, never>>,
+  ExtraMethods,
   ResolveNever<ExecuteFn, Record<never, never>>
 > &
   ResolveNever<BaseMethods, Record<never, never>>;
