@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-temporal",
-  "version": "0.0.0",
+  "version": "0.1.0-beta.2",
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,7 +15,8 @@
     "dist"
   ],
   "publishConfig": {
-    "access": "restricted"
+    "access": "restricted",
+    "registry": "https://npm.cloudsmith.io/honeybook/npmjs/"
   },
   "scripts": {
     "build": "rimraf dist && tsc -b tsconfig.build.json && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json",

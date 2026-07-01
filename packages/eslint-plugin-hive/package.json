@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/eslint-plugin-hive",
-  "version": "0.0.0",
+  "version": "0.1.0-beta.0",
   "description": "ESLint rules enforcing hive's MockAdapter pattern over raw jest/vitest mocking APIs",
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
@@ -16,7 +16,8 @@
     "dist"
   ],
   "publishConfig": {
-    "access": "restricted"
+    "access": "restricted",
+    "registry": "https://npm.cloudsmith.io/honeybook/npmjs/"
   },
   "scripts": {
     "build": "rimraf dist && tsc -b tsconfig.build.json && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json",

@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive",
-  "version": "1.4.0",
+  "version": "1.5.0-beta.1",
   "description": "HoneyBook test kits infrastructure for building structured testing frameworks",
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
@@ -37,6 +37,7 @@
     "typescript": "6.0.3"
   },
   "publishConfig": {
-    "access": "restricted"
+    "access": "restricted",
+    "registry": "https://npm.cloudsmith.io/honeybook/npmjs/"
   }
 }

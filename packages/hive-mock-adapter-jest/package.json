@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-mock-adapter-jest",
-  "version": "0.0.0",
+  "version": "0.1.0-beta.1",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
@@ -23,7 +23,8 @@
     "resolver.cjs"
   ],
   "publishConfig": {
-    "access": "restricted"
+    "access": "restricted",
+    "registry": "https://npm.cloudsmith.io/honeybook/npmjs/"
   },
   "scripts": {
     "build": "rimraf dist && tsc -b && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
