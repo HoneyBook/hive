@@ -1,4 +1,4 @@
-import { TestKit } from './test-kit';
+import { TestKit } from "./test-kit";
 
 /**
  * Base class for test kits that need async seeding.

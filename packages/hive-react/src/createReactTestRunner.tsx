@@ -1,26 +1,19 @@
-import React from 'react';
-import { TestKit } from '@honeybook/hive';
-import { createBaseTestRunner } from '@honeybook/hive-runner';
-import type {
-  RunnerFactory,
-  NoExecuteFn,
-  KitClassArray,
-} from '@honeybook/hive-runner';
-import type { CombinedTestKitsResult } from '@honeybook/hive';
-import {
-  render as rtlRender,
-  renderHook as rtlRenderHook,
-} from '@testing-library/react';
+import React from "react";
+import { TestKit } from "@honeybook/hive";
+import { createBaseTestRunner } from "@honeybook/hive-runner";
+import type { RunnerFactory, NoExecuteFn, KitClassArray } from "@honeybook/hive-runner";
+import type { CombinedTestKitsResult } from "@honeybook/hive";
+import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
 import type {
   RenderOptions,
   RenderResult,
   RenderHookOptions,
   RenderHookResult,
-} from '@testing-library/react';
-import { generateProviderStack } from './generateProviderStack';
-import { ReactTestKit } from './ReactTestKit';
+} from "@testing-library/react";
+import { generateProviderStack } from "./generateProviderStack";
+import { ReactTestKit } from "./ReactTestKit";
 
-type Wrapper = NonNullable<RenderOptions['wrapper']>;
+type Wrapper = NonNullable<RenderOptions["wrapper"]>;
 
 // GetProviders: no arg, returns a Wrapper. Bound to runner this via ThisType<> at call site.
 type GetProviders = () => Wrapper;
@@ -41,31 +34,32 @@ export type ReactBaseKits = typeof REACT_BASE_KITS;
 export type ReactRenderMethods<BaseKits extends KitClassArray> = {
   render(
     component: React.ReactElement,
-    options?: RenderOptions
+    options?: RenderOptions,
   ): CombinedTestKitsResult<InstanceType<BaseKits[number]>[]>;
   renderComponent(
     component:
       | React.ReactElement
       | ((result: CombinedTestKitsResult<InstanceType<BaseKits[number]>[]>) => React.ReactElement),
-    options?: RenderOptions
+    options?: RenderOptions,
   ): CombinedTestKitsResult<InstanceType<BaseKits[number]>[]>;
   renderHook<Result, Props>(
     hook: (props: Props) => Result,
-    options?: RenderHookOptions<Props>
+    options?: RenderHookOptions<Props>,
   ): RenderHookResult<Result, Props>;
 };
 
-function getProviderStack(
-  testKits: TestKit[],
-  extraProvider?: () => Wrapper
-): Wrapper {
+function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): Wrapper {
   const kitStack = generateProviderStack(testKits);
   if (!extraProvider) return kitStack;
   // Lazy — extraProvider() called inside the returned Wrapper, at React render time
   const KitStack = kitStack;
   const Wrapped: Wrapper = ({ children }) => {
     const ExtraProvider = extraProvider();
-    return <KitStack><ExtraProvider>{children}</ExtraProvider></KitStack>;
+    return (
+      <KitStack>
+        <ExtraProvider>{children}</ExtraProvider>
+      </KitStack>
+    );
   };
   return Wrapped;
 }
@@ -94,17 +88,18 @@ export const createReactTestRunner: RunnerFactory<
 > = (kits, extraMethods, getProviders) => {
   const allKits = [ReactTestKit, ...kits];
 
-  const builtIn: ReactRenderMethods<ReactBaseKits> & ThisType<{
-    run(): Promise<void> | void;
-    testKits: TestKit[];
-    testKitsMap: { ReactTestKit: ReactTestKit } & Record<string, TestKit>;
-    result: CombinedTestKitsResult<InstanceType<typeof REACT_BASE_KITS[number]>[]>;
-  }> = {
+  const builtIn: ReactRenderMethods<ReactBaseKits> &
+    ThisType<{
+      run(): Promise<void> | void;
+      testKits: TestKit[];
+      testKitsMap: { ReactTestKit: ReactTestKit } & Record<string, TestKit>;
+      result: CombinedTestKitsResult<InstanceType<(typeof REACT_BASE_KITS)[number]>[]>;
+    }> = {
     render(component, options?) {
       this.run();
       const Wrapper = getProviderStack(
         this.testKits,
-        getProviders ? (getProviders as (() => Wrapper)).bind(this) : undefined
+        getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
       const rtlResult = rtlRender(component, { wrapper: Wrapper, ...options } as RenderOptions);
       this.testKitsMap.ReactTestKit.seedRenderResult(rtlResult);
@@ -114,9 +109,9 @@ export const createReactTestRunner: RunnerFactory<
       this.run();
       const Wrapper = getProviderStack(
         this.testKits,
-        getProviders ? (getProviders as (() => Wrapper)).bind(this) : undefined
+        getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
-      const element = typeof component === 'function' ? component(this.result) : component;
+      const element = typeof component === "function" ? component(this.result) : component;
       const rtlResult = rtlRender(element, { wrapper: Wrapper, ...options } as RenderOptions);
       this.testKitsMap.ReactTestKit.seedRenderResult(rtlResult);
       return this.result;
@@ -125,13 +120,11 @@ export const createReactTestRunner: RunnerFactory<
       this.run();
       const Wrapper = getProviderStack(
         this.testKits,
-        getProviders ? (getProviders as (() => Wrapper)).bind(this) : undefined
+        getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
       const rtlResult = rtlRenderHook(hook, { wrapper: Wrapper, ...options });
       // renderHook result is not a RenderResult — seed as-is for reference; cast required.
-      this.testKitsMap.ReactTestKit.seedRenderResult(
-        rtlResult as unknown as RenderResult
-      );
+      this.testKitsMap.ReactTestKit.seedRenderResult(rtlResult as unknown as RenderResult);
       return rtlResult;
     },
   };

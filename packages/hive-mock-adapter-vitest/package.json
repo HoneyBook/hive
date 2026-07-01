@@ -16,8 +16,12 @@
       "types": "./dist/src/setup.d.ts"
     }
   },
-  "files": ["dist"],
-  "publishConfig": { "access": "restricted" },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "restricted"
+  },
   "scripts": {
     "build": "rimraf dist && tsc -b",
     "clean": "rimraf dist",

@@ -1,6 +1,10 @@
-import { TestKit } from '@honeybook/hive';
-import type { AppRunnerWithChainableTestKitsMethods, TestKitsInstances, TestKitArrayToRecord } from '@honeybook/hive';
-import type { BaseTestRunner } from './createBaseTestRunner';
+import { TestKit } from "@honeybook/hive";
+import type {
+  AppRunnerWithChainableTestKitsMethods,
+  TestKitsInstances,
+  TestKitArrayToRecord,
+} from "@honeybook/hive";
+import type { BaseTestRunner } from "./createBaseTestRunner";
 
 /** Constraint for arrays of zero-argument TestKit constructors. */
 export type KitClassArray = ReadonlyArray<new () => TestKit>;
@@ -26,7 +30,7 @@ export type NoExecuteFn = never;
  */
 export type RunnerMethodMap<
   AllMethods extends Record<string, (...args: any[]) => unknown>,
-  Runner
+  Runner,
 > = {
   [K in keyof AllMethods]: AllMethods[K] extends (...args: infer Args) => infer R
     ? (...args: Args) => [R] extends [void] ? Runner : R
@@ -48,7 +52,9 @@ export type AppRunnerWithExtraMethods<
   BaseTestRunner<AllKitsClasses, TestKitsInstances<AllKitsClasses>> &
     Handle & {
       [K in keyof ExtraMethods]: ExtraMethods[K] extends (...args: infer Args) => infer R
-        ? (...args: Args) => [R] extends [void]
+        ? (
+            ...args: Args
+          ) => [R] extends [void]
             ? AppRunnerWithExtraMethods<AllKitsClasses, ExtraMethods, Handle>
             : R
         : never;
@@ -90,22 +96,25 @@ export type RunnerFactory<
   BaseKits extends KitClassArray,
   ExecuteFn extends object = NoExecuteFn,
   BaseMethods extends object = Record<never, never>,
-  PlatformArg = never
+  PlatformArg = never,
 > = <
   KitsClasses extends KitClassArray,
   ExtraMethods extends Record<string, (...args: any[]) => unknown> = NoMethods,
 >(
   kits: KitsClasses,
-  extraMethods?: ExtraMethods & ThisType<
-    AppRunnerWithExtraMethods<
-      [...BaseKits, ...KitsClasses],
-      ResolveNever<ExtraMethods, Record<never, never>>,
-      ResolveNever<ExecuteFn, Record<never, never>>
-    > & ResolveNever<BaseMethods, Record<never, never>>
-  >,
+  extraMethods?: ExtraMethods &
+    ThisType<
+      AppRunnerWithExtraMethods<
+        [...BaseKits, ...KitsClasses],
+        ResolveNever<ExtraMethods, Record<never, never>>,
+        ResolveNever<ExecuteFn, Record<never, never>>
+      > &
+        ResolveNever<BaseMethods, Record<never, never>>
+    >,
   ...rest: PlatformArgs<PlatformArg>
 ) => AppRunnerWithExtraMethods<
   [...BaseKits, ...KitsClasses],
   ResolveNever<ExtraMethods, Record<never, never>>,
   ResolveNever<ExecuteFn, Record<never, never>>
-> & ResolveNever<BaseMethods, Record<never, never>>;
+> &
+  ResolveNever<BaseMethods, Record<never, never>>;

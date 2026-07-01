@@ -8,51 +8,51 @@ A powerful testing framework infrastructure that provides base classes and utili
 
 ### **Base Classes**
 
--   `TestKit` - Abstract base class for creating test kits
--   `TestAppRunner` - Base class for combining test kits into app runners
--   `RenderTestKit` - Base class for React component test kits
+- `TestKit` - Abstract base class for creating test kits
+- `TestAppRunner` - Base class for combining test kits into app runners
+- `RenderTestKit` - Base class for React component test kits
 
 ### **Utilities**
 
--   `buildTestKitRecordFromArray` - Convert test kit arrays to keyed records
--   `collectImplicitDependenciesDeep` - Resolve transitive test kit dependencies
--   `createAppRunner` - Factory function for creating app runners
+- `buildTestKitRecordFromArray` - Convert test kit arrays to keyed records
+- `collectImplicitDependenciesDeep` - Resolve transitive test kit dependencies
+- `createAppRunner` - Factory function for creating app runners
 
 ### **TypeScript Types**
 
--   `TestKitArrayToRecord` - Convert test kit arrays to record types
--   `DependsOn` - Helper for declaring test kit dependencies
--   `CombinedTestKitsResult` - Combine results from multiple test kits
--   `AppRunnerWithChainableTestKitsMethods` - Chainable method types
+- `TestKitArrayToRecord` - Convert test kit arrays to record types
+- `DependsOn` - Helper for declaring test kit dependencies
+- `CombinedTestKitsResult` - Combine results from multiple test kits
+- `AppRunnerWithChainableTestKitsMethods` - Chainable method types
 
 ## 🚀 **Usage**
 
 ### **Creating a Test Kit**
 
 ```typescript
-import { TestKit } from '@honeybook/hive';
+import { TestKit } from "@honeybook/hive";
 
 export class UserTestKit extends TestKit {
-    result = {
-        user: null as User | null,
-        isLoggedIn: false
-    };
+  result = {
+    user: null as User | null,
+    isLoggedIn: false,
+  };
 
-    get name() {
-        return 'UserTestKit';
-    }
+  get name() {
+    return "UserTestKit";
+  }
 
-    withUser(user: User) {
-        this.result.user = user;
-        this.result.isLoggedIn = true;
-        return this;
-    }
+  withUser(user: User) {
+    this.result.user = user;
+    this.result.isLoggedIn = true;
+    return this;
+  }
 
-    withLoggedOutUser() {
-        this.result.user = null;
-        this.result.isLoggedIn = false;
-        return this;
-    }
+  withLoggedOutUser() {
+    this.result.user = null;
+    this.result.isLoggedIn = false;
+    return this;
+  }
 }
 ```
 
@@ -96,26 +96,26 @@ Test kits can declare dependencies on other test kits:
 
 ```typescript
 export class ProjectTestKit extends TestKit {
-    // Declare that this test kit depends on UserTestKit
-    get dependentTestKitClasses() {
-        return [UserTestKit];
-    }
+  // Declare that this test kit depends on UserTestKit
+  get dependentTestKitClasses() {
+    return [UserTestKit];
+  }
 
-    result = {
-        project: null as Project | null
-    };
+  result = {
+    project: null as Project | null,
+  };
 
-    get name() {
-        return 'ProjectTestKit';
-    }
+  get name() {
+    return "ProjectTestKit";
+  }
 
-    withProject(project: Project) {
-        // Access the user from the dependent test kit
-        const { user } = this.getDependentTestKitsMap().UserTestKit.result;
+  withProject(project: Project) {
+    // Access the user from the dependent test kit
+    const { user } = this.getDependentTestKitsMap().UserTestKit.result;
 
-        this.result.project = { ...project, ownerId: user?.id };
-        return this;
-    }
+    this.result.project = { ...project, ownerId: user?.id };
+    return this;
+  }
 }
 ```
 
@@ -132,34 +132,34 @@ The hive package provides a **dependency-aware testing framework** where:
 
 ### **TestKit (Abstract)**
 
--   `abstract result: unknown` - Test data result
--   `abstract get name(): string` - Test kit name
--   `get dependentTestKitClasses()` - Declare dependencies
--   `beforeWith()` - Hook called before any with method
--   `defaultCallback?` - Default initialization function
+- `abstract result: unknown` - Test data result
+- `abstract get name(): string` - Test kit name
+- `get dependentTestKitClasses()` - Declare dependencies
+- `beforeWith()` - Hook called before any with method
+- `defaultCallback?` - Default initialization function
 
 ### **TestAppRunner (Abstract)**
 
--   `get result()` - Combined results from all test kits
--   `abstract render()` - Render the application
--   `abstract renderComponent()` - Render specific components
--   `setup()` - Initialize test kit bindings
--   `initAllTestKitsWithDefaults()` - Initialize with defaults
+- `get result()` - Combined results from all test kits
+- `abstract render()` - Render the application
+- `abstract renderComponent()` - Render specific components
+- `setup()` - Initialize test kit bindings
+- `initAllTestKitsWithDefaults()` - Initialize with defaults
 
 ### **Utilities**
 
--   `createAppRunner({ appRunnerClass })` - Factory for creating app runners
--   `buildTestKitRecordFromArray(testKits)` - Convert array to keyed record
--   `collectImplicitDependenciesDeep(testKitsMap)` - Resolve dependencies
+- `createAppRunner({ appRunnerClass })` - Factory for creating app runners
+- `buildTestKitRecordFromArray(testKits)` - Convert array to keyed record
+- `collectImplicitDependenciesDeep(testKitsMap)` - Resolve dependencies
 
 ## 🔗 **Integration**
 
 This package is designed to work with:
 
--   **React Testing Library** for component testing
--   **Jest** for test execution
--   **TypeScript** for type safety
--   **Other HoneyBook packages** for domain-specific functionality
+- **React Testing Library** for component testing
+- **Jest** for test execution
+- **TypeScript** for type safety
+- **Other HoneyBook packages** for domain-specific functionality
 
 ## 📝 **Best Practices**
 

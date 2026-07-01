@@ -1,4 +1,8 @@
-export { mockSubstitutionPlugin, siblingMockResolver, mocksDirResolver } from "./src/mockSubstitutionPlugin.js";
+export {
+  mockSubstitutionPlugin,
+  siblingMockResolver,
+  mocksDirResolver,
+} from "./src/mockSubstitutionPlugin.js";
 export type { MockResolver } from "./src/mockSubstitutionPlugin.js";
 export { MockAdapter } from "./src/MockAdapter.js";
 export { cleanupMockAdapters } from "@honeybook/hive-mock-adapter";

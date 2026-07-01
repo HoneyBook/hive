@@ -1,32 +1,32 @@
-import express from 'express';
-import { createExpressTestRunner } from '../src/createExpressTestRunner';
+import express from "express";
+import { createExpressTestRunner } from "../src/createExpressTestRunner";
 
 // ─── Inline Express app ─────────────────────────────────────────────────────
 
 function makeApp() {
   const app = express();
-  app.get('/ping', (_req, res) => {
+  app.get("/ping", (_req, res) => {
     res.json({ pong: true });
   });
-  app.get('/echo-header', (req, res) => {
-    res.json({ value: req.header('x-test') });
+  app.get("/echo-header", (req, res) => {
+    res.json({ value: req.header("x-test") });
   });
   return app;
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe('createExpressTestRunner', () => {
-  it('runner.request is a supertest agent', async () => {
+describe("createExpressTestRunner", () => {
+  it("runner.request is a supertest agent", async () => {
     const runner = createExpressTestRunner([]);
     // Hive's builder-support calls a function first-arg with runner.result;
     // passing () => makeApp() stores the app instance (proxy invokes the factory).
     runner.withApp(() => makeApp());
     await runner.run();
-    expect(typeof runner.request.get).toBe('function');
+    expect(typeof runner.request.get).toBe("function");
   });
 
-  it('runner.result.app is the app instance', async () => {
+  it("runner.result.app is the app instance", async () => {
     const runner = createExpressTestRunner([]);
     const app = makeApp();
     // Express apps ARE functions — proxy always calls function first-args.
@@ -36,24 +36,24 @@ describe('createExpressTestRunner', () => {
     expect(runner.result.app).toBe(app);
   });
 
-  it('HTTP roundtrip: GET /ping returns { pong: true }', async () => {
+  it("HTTP roundtrip: GET /ping returns { pong: true }", async () => {
     const runner = createExpressTestRunner([]);
     runner.withApp(() => makeApp());
     await runner.run();
-    const res = await runner.request.get('/ping');
+    const res = await runner.request.get("/ping");
     expect(res.body).toEqual({ pong: true });
   });
 
-  it('withHeaders applied to every request', async () => {
+  it("withHeaders applied to every request", async () => {
     const runner = createExpressTestRunner([]);
-    runner.withHeaders({ 'x-test': 'hdr-value' });
+    runner.withHeaders({ "x-test": "hdr-value" });
     runner.withApp(() => makeApp());
     await runner.run();
-    const res = await runner.request.get('/echo-header');
-    expect(res.body.value).toBe('hdr-value');
+    const res = await runner.request.get("/echo-header");
+    expect(res.body.value).toBe("hdr-value");
   });
 
-  it('consumer void extraMethod still chains', () => {
+  it("consumer void extraMethod still chains", () => {
     const runner = createExpressTestRunner([], {
       withCustomId(): void {
         // void extra method — chains back to runner

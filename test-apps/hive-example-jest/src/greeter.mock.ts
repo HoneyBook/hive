@@ -7,7 +7,7 @@ export const Greeter = MockAdapter(
       return "";
     }
     reset(): void {}
-  }
+  },
 );
 export type Greeter = InstanceType<typeof Greeter>;
 

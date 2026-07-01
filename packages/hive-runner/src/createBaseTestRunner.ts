@@ -1,11 +1,11 @@
-import { TestKit, TestAppRunner, createAppRunner, AsyncTestKit } from '@honeybook/hive';
+import { TestKit, TestAppRunner, createAppRunner, AsyncTestKit } from "@honeybook/hive";
 import type {
   CombinedTestKitsResult,
   TestKitsInstances,
   TestKitArrayToRecord,
-} from '@honeybook/hive';
-import type { Constructor } from 'type-fest';
-import type { AppRunnerWithExtraMethods } from './types';
+} from "@honeybook/hive";
+import type { Constructor } from "type-fest";
+import type { AppRunnerWithExtraMethods } from "./types";
 
 /**
  * Platform-agnostic base runner engine — React-stripped port of createHbTestAppRunner.
