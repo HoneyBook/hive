@@ -60,7 +60,10 @@ export function mockSubstitutionPlugin(opts: {
     plugin.config = (config) => {
       const existingAlias = Array.isArray(config.resolve?.alias)
         ? config.resolve.alias
-        : Object.entries(config.resolve?.alias ?? {}).map(([find, replacement]) => ({ find, replacement }));
+        : Object.entries(config.resolve?.alias ?? {}).map(([find, replacement]) => ({
+            find,
+            replacement,
+          }));
       return {
         resolve: {
           alias: [

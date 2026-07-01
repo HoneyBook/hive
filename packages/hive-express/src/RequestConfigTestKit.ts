@@ -1,5 +1,5 @@
-import { TestKit } from '@honeybook/hive';
-import type { Application } from 'express';
+import { TestKit } from "@honeybook/hive";
+import type { Application } from "express";
 
 export interface RequestConfigTestKitResult {
   app: Application | undefined;
@@ -11,8 +11,8 @@ export class RequestConfigTestKit extends TestKit {
 
   defaultCallback = (): void => {};
 
-  get name(): 'RequestConfigTestKit' {
-    return 'RequestConfigTestKit';
+  get name(): "RequestConfigTestKit" {
+    return "RequestConfigTestKit";
   }
 
   withApp(app: Application): void {

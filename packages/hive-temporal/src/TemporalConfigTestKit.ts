@@ -1,5 +1,5 @@
-import { TestKit } from '@honeybook/hive';
-import type { WorkflowBundle } from '@temporalio/worker';
+import { TestKit } from "@honeybook/hive";
+import type { WorkflowBundle } from "@temporalio/worker";
 
 export interface TemporalConfigTestKitResult {
   workflowsPath: string | undefined;
@@ -17,13 +17,13 @@ export class TemporalConfigTestKit extends TestKit {
     childWorkflowsPath: undefined,
     childWorkflowBundle: undefined,
     activities: undefined,
-    taskQueuePrefix: 'hive-test',
+    taskQueuePrefix: "hive-test",
   };
 
   defaultCallback = (): void => {};
 
-  get name(): 'TemporalConfigTestKit' {
-    return 'TemporalConfigTestKit';
+  get name(): "TemporalConfigTestKit" {
+    return "TemporalConfigTestKit";
   }
 
   withWorkflowsPath(path: string): void {

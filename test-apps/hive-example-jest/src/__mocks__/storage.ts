@@ -7,6 +7,6 @@ export const Storage = MockAdapter(
       return null;
     }
     reset(): void {}
-  }
+  },
 );
 export type Storage = InstanceType<typeof Storage>;

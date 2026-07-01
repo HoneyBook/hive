@@ -21,7 +21,11 @@ export function mocksDirResolver(realAbsolutePath: string): string | null {
 
 const mockSubstitutionResolver = (
   request: string,
-  options: { basedir: string; defaultResolver: (req: string, opts: object) => string; [key: string]: unknown }
+  options: {
+    basedir: string;
+    defaultResolver: (req: string, opts: object) => string;
+    [key: string]: unknown;
+  },
 ): string => {
   const real = options.defaultResolver(request, options);
   if (!real.endsWith(".ts") && !real.endsWith(".tsx")) return real;

@@ -1,5 +1,5 @@
-import { TestKit } from '@honeybook/hive';
-import { TestWorkflowEnvironment } from '@temporalio/testing';
+import { TestKit } from "@honeybook/hive";
+import { TestWorkflowEnvironment } from "@temporalio/testing";
 
 let sharedEnv: TestWorkflowEnvironment | undefined;
 
@@ -23,7 +23,7 @@ export function setupTemporalHarness(): void {
 export function getSharedTemporalEnv(): TestWorkflowEnvironment {
   if (!sharedEnv) {
     throw new Error(
-      '[TemporalTestKit] getSharedTemporalEnv called before beforeAll — is TemporalTestKit in the runner base kit list?',
+      "[TemporalTestKit] getSharedTemporalEnv called before beforeAll — is TemporalTestKit in the runner base kit list?",
     );
   }
   return sharedEnv;
@@ -46,7 +46,7 @@ export class TemporalTestKit extends TestKit {
 
   defaultCallback = (): void => {};
 
-  get name(): 'TemporalTestKit' {
-    return 'TemporalTestKit';
+  get name(): "TemporalTestKit" {
+    return "TemporalTestKit";
   }
 }

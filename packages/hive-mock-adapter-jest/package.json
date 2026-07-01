@@ -18,8 +18,13 @@
     },
     "./resolver": "./resolver.cjs"
   },
-  "files": ["dist", "resolver.cjs"],
-  "publishConfig": { "access": "restricted" },
+  "files": [
+    "dist",
+    "resolver.cjs"
+  ],
+  "publishConfig": {
+    "access": "restricted"
+  },
   "scripts": {
     "build": "rimraf dist && tsc -b && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
     "clean": "rimraf dist",

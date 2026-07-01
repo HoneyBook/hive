@@ -22,12 +22,12 @@ In `jest.config.js`, use the built-in resolver (`.mock.ts` sibling substitution 
 
 ```js
 module.exports = {
-  testEnvironment: 'node',
+  testEnvironment: "node",
   transform: {
-    '^.+\\.ts$': ['ts-jest', { diagnostics: false }]
+    "^.+\\.ts$": ["ts-jest", { diagnostics: false }],
   },
-  resolver: require.resolve('@honeybook/hive-mock-adapter-jest/resolver'),
-  setupFilesAfterEnv: ['<rootDir>/src/setup.ts'],
+  resolver: require.resolve("@honeybook/hive-mock-adapter-jest/resolver"),
+  setupFilesAfterEnv: ["<rootDir>/src/setup.ts"],
   clearMocks: true,
 };
 ```
@@ -35,11 +35,11 @@ module.exports = {
 To also support `__mocks__/` directory substitution, compose resolvers in your own `jest-resolver.cjs`:
 
 ```js
-const { siblingMockResolver, mocksDirResolver } = require('@honeybook/hive-mock-adapter-jest');
+const { siblingMockResolver, mocksDirResolver } = require("@honeybook/hive-mock-adapter-jest");
 
-module.exports = function(request, options) {
+module.exports = function (request, options) {
   const real = options.defaultResolver(request, options);
-  if (!real.endsWith('.ts') && !real.endsWith('.tsx')) return real;
+  if (!real.endsWith(".ts") && !real.endsWith(".tsx")) return real;
   return siblingMockResolver(real) ?? mocksDirResolver(real) ?? real;
 };
 ```
@@ -48,7 +48,7 @@ Then point jest at it:
 
 ```js
 module.exports = {
-  resolver: require.resolve('./jest-resolver.cjs'),
+  resolver: require.resolve("./jest-resolver.cjs"),
   // ...
 };
 ```
@@ -84,7 +84,7 @@ export const Greeter = MockAdapter(
       return "";
     }
     reset(): void {}
-  }
+  },
 );
 export type Greeter = InstanceType<typeof Greeter>;
 ```

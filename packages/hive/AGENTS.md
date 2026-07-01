@@ -4,12 +4,12 @@
 
 ## At a Glance
 
-| | |
-|-|-|
-| **Type** | Shared Kernel (Test Framework) |
-| **Owns** | `TestKit` base class, `TestAppRunner` orchestrator, dependency resolution between test kits |
+|                  |                                                                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| **Type**         | Shared Kernel (Test Framework)                                                                            |
+| **Owns**         | `TestKit` base class, `TestAppRunner` orchestrator, dependency resolution between test kits               |
 | **Does NOT own** | Concrete test kits (those live in their domain packages), mock adapters (→ `testing`), Jest configuration |
-| **Users** | All packages that define test kits for their domain |
+| **Users**        | All packages that define test kits for their domain                                                       |
 
 ## Navigation
 
@@ -48,21 +48,22 @@ TestAppRunner
 Calling `runner.withInvoice(...)` auto-initializes `CompanyTestKit` and `UserTestKit` if not already set up.
 
 **Chainable API:**
+
 ```ts
 const runner = createAppRunner({ appRunnerClass: MyAppRunner });
-runner.withUser({ name: 'Test' }).withCompany({ type: 'photographer' }).render();
+runner.withUser({ name: "Test" }).withCompany({ type: "photographer" }).render();
 ```
 
 **Result composition:** `runner.result` merges all test kit results into a single object via `Object.assign`.
 
 ## Pitfalls
 
-| Trap | Reality |
-|------|---------|
-| Missing `defaultCallback` on a dependency | Throws with full dependency chain in error message — add a `defaultCallback` or explicitly call `with*` before the dependent |
-| Adding non-`with*` public methods to test kits | They won't be exposed on the app runner — only methods starting with `with` are proxied |
-| Circular dependencies between test kits | Will cause infinite recursion in `initDependentTestKitsIfNeeded` — the framework doesn't detect cycles |
-| **Returning `this` from `with*` methods** | If a `with*` method returns `this`, the `TestAppRunner` wrapper's TypeScript inference breaks and callers see type errors when chaining. Always declare `with*` methods as `: void`. |
+| Trap                                                                 | Reality                                                                                                                                                                                           |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Missing `defaultCallback` on a dependency                            | Throws with full dependency chain in error message — add a `defaultCallback` or explicitly call `with*` before the dependent                                                                      |
+| Adding non-`with*` public methods to test kits                       | They won't be exposed on the app runner — only methods starting with `with` are proxied                                                                                                           |
+| Circular dependencies between test kits                              | Will cause infinite recursion in `initDependentTestKitsIfNeeded` — the framework doesn't detect cycles                                                                                            |
+| **Returning `this` from `with*` methods**                            | If a `with*` method returns `this`, the `TestAppRunner` wrapper's TypeScript inference breaks and callers see type errors when chaining. Always declare `with*` methods as `: void`.              |
 | **Calling `withX()` with no overrides to "initialize" a dependency** | Unnecessary — Hive auto-initializes all declared dependencies via `defaultCallback` when any `with*` method runs. Only call a dependency's `with*` method when you need to override its defaults. |
 
 ## Testing

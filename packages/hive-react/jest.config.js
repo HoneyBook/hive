@@ -1,15 +1,15 @@
 module.exports = {
-  testEnvironment: 'jsdom',
-  roots: ['<rootDir>/__tests__'],
+  testEnvironment: "jsdom",
+  roots: ["<rootDir>/__tests__"],
   transform: {
-    '^.+\\.(ts|tsx|js|jsx)$': ['ts-jest', { diagnostics: false }],
+    "^.+\\.(ts|tsx|js|jsx)$": ["ts-jest", { diagnostics: false }],
   },
   transformIgnorePatterns: [
-    '/node_modules/.pnpm/(?!(lodash-es|type-fest))',
-    '/node_modules/(?!(.pnpm|lodash-es|type-fest))',
+    "/node_modules/.pnpm/(?!(lodash-es|type-fest))",
+    "/node_modules/(?!(.pnpm|lodash-es|type-fest))",
   ],
   moduleNameMapper: {
-    '^@honeybook/hive$': '<rootDir>/../hive/index.ts',
-    '^@honeybook/hive-runner$': '<rootDir>/../hive-runner/index.ts',
+    "^@honeybook/hive$": "<rootDir>/../hive/index.ts",
+    "^@honeybook/hive-runner$": "<rootDir>/../hive-runner/index.ts",
   },
 };

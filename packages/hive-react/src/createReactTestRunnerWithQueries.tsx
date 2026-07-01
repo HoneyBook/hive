@@ -1,24 +1,24 @@
-import React from 'react';
-import { TestKit } from '@honeybook/hive';
-import type { CombinedTestKitsResult } from '@honeybook/hive';
-import { createBaseTestRunner } from '@honeybook/hive-runner';
-import type { AppRunnerWithExtraMethods, KitClassArray } from '@honeybook/hive-runner';
+import React from "react";
+import { TestKit } from "@honeybook/hive";
+import type { CombinedTestKitsResult } from "@honeybook/hive";
+import { createBaseTestRunner } from "@honeybook/hive-runner";
+import type { AppRunnerWithExtraMethods, KitClassArray } from "@honeybook/hive-runner";
 import {
   render as rtlRender,
   renderHook as rtlRenderHook,
   queries as defaultQueries,
-} from '@testing-library/react';
+} from "@testing-library/react";
 import type {
   Queries,
   RenderOptions,
   RenderResult,
   RenderHookOptions,
   RenderHookResult,
-} from '@testing-library/react';
-import { generateProviderStack } from './generateProviderStack';
-import { ReactTestKitWithQueries } from './ReactTestKit';
+} from "@testing-library/react";
+import { generateProviderStack } from "./generateProviderStack";
+import { ReactTestKitWithQueries } from "./ReactTestKit";
 
-type Wrapper = NonNullable<RenderOptions['wrapper']>;
+type Wrapper = NonNullable<RenderOptions["wrapper"]>;
 
 // GetProviders: no arg, returns a Wrapper. Bound to runner this via ThisType<> at call site.
 type GetProviders = () => Wrapper;
@@ -26,30 +26,31 @@ type GetProviders = () => Wrapper;
 type ReactRenderMethodsQ<Q extends Queries, AllKits extends Array<new () => TestKit>> = {
   render(
     component: React.ReactElement,
-    options?: RenderOptions<Q>
+    options?: RenderOptions<Q>,
   ): CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
   renderComponent(
     component:
       | React.ReactElement
       | ((result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => React.ReactElement),
-    options?: RenderOptions<Q>
+    options?: RenderOptions<Q>,
   ): CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
   renderHook<Result, Props>(
     hook: (props: Props) => Result,
-    options?: RenderHookOptions<Props, Q>
+    options?: RenderHookOptions<Props, Q>,
   ): RenderHookResult<Result, Props>;
 };
 
-function getProviderStack(
-  testKits: TestKit[],
-  extraProvider?: () => Wrapper
-): Wrapper {
+function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): Wrapper {
   const kitStack = generateProviderStack(testKits);
   if (!extraProvider) return kitStack;
   const KitStack = kitStack;
   const Wrapped: Wrapper = ({ children }) => {
     const ExtraProvider = extraProvider();
-    return <KitStack><ExtraProvider>{children}</ExtraProvider></KitStack>;
+    return (
+      <KitStack>
+        <ExtraProvider>{children}</ExtraProvider>
+      </KitStack>
+    );
   };
   return Wrapped;
 }
@@ -69,18 +70,20 @@ export function createReactTestRunnerWithQueries<
   KitsClasses extends KitClassArray,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ExtraMethods extends Record<string, (...args: any[]) => unknown> = Record<never, never>,
-  Q extends Queries = typeof defaultQueries
+  Q extends Queries = typeof defaultQueries,
 >(
   kits: KitsClasses,
-  extraMethods?: ExtraMethods & ThisType<
-    AppRunnerWithExtraMethods<[typeof ReactTestKitWithQueries, ...KitsClasses], ExtraMethods> &
-    ReactRenderMethodsQ<Q, [typeof ReactTestKitWithQueries, ...KitsClasses]>
-  >,
-  getProviders?: GetProviders & ThisType<
-    AppRunnerWithExtraMethods<[typeof ReactTestKitWithQueries, ...KitsClasses], ExtraMethods> &
-    ReactRenderMethodsQ<Q, [typeof ReactTestKitWithQueries, ...KitsClasses]>
-  >,
-  customQueries?: Q
+  extraMethods?: ExtraMethods &
+    ThisType<
+      AppRunnerWithExtraMethods<[typeof ReactTestKitWithQueries, ...KitsClasses], ExtraMethods> &
+        ReactRenderMethodsQ<Q, [typeof ReactTestKitWithQueries, ...KitsClasses]>
+    >,
+  getProviders?: GetProviders &
+    ThisType<
+      AppRunnerWithExtraMethods<[typeof ReactTestKitWithQueries, ...KitsClasses], ExtraMethods> &
+        ReactRenderMethodsQ<Q, [typeof ReactTestKitWithQueries, ...KitsClasses]>
+    >,
+  customQueries?: Q,
 ): AppRunnerWithExtraMethods<[typeof ReactTestKitWithQueries, ...KitsClasses], ExtraMethods> &
   ReactRenderMethodsQ<Q, [typeof ReactTestKitWithQueries, ...KitsClasses]> {
   type AllKits = [typeof ReactTestKitWithQueries, ...KitsClasses];
@@ -91,21 +94,29 @@ export function createReactTestRunnerWithQueries<
 
   const renderOptions = customQueries ? { queries: customQueries } : {};
 
-  const builtIn: ReactRenderMethodsQ<Q, AllKits> & ThisType<
-    AppRunnerWithExtraMethods<AllKits, ExtraMethods> &
-    ReactRenderMethodsQ<Q, AllKits> & {
-      testKits: TestKit[];
-      testKitsMap: { ReactTestKitWithQueries: ReactTestKitWithQueries<Q> } & Record<string, TestKit>;
-      result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
-    }
-  > = {
+  const builtIn: ReactRenderMethodsQ<Q, AllKits> &
+    ThisType<
+      AppRunnerWithExtraMethods<AllKits, ExtraMethods> &
+        ReactRenderMethodsQ<Q, AllKits> & {
+          testKits: TestKit[];
+          testKitsMap: { ReactTestKitWithQueries: ReactTestKitWithQueries<Q> } & Record<
+            string,
+            TestKit
+          >;
+          result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
+        }
+    > = {
     render(component, options?) {
       this.run();
       const Wrapper = getProviderStack(
         this.testKits,
-        getProviders ? (getProviders as (() => Wrapper)).bind(this) : undefined
+        getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
-      const rtlResult = rtlRender(component, { wrapper: Wrapper, ...renderOptions, ...options } as RenderOptions<Q>) as RenderResult<Q>;
+      const rtlResult = rtlRender(component, {
+        wrapper: Wrapper,
+        ...renderOptions,
+        ...options,
+      } as RenderOptions<Q>) as RenderResult<Q>;
       this.testKitsMap.ReactTestKitWithQueries.seedRenderResult(rtlResult);
       return this.result;
     },
@@ -113,10 +124,14 @@ export function createReactTestRunnerWithQueries<
       this.run();
       const Wrapper = getProviderStack(
         this.testKits,
-        getProviders ? (getProviders as (() => Wrapper)).bind(this) : undefined
+        getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
-      const element = typeof component === 'function' ? component(this.result) : component;
-      const rtlResult = rtlRender(element, { wrapper: Wrapper, ...renderOptions, ...options } as RenderOptions<Q>) as RenderResult<Q>;
+      const element = typeof component === "function" ? component(this.result) : component;
+      const rtlResult = rtlRender(element, {
+        wrapper: Wrapper,
+        ...renderOptions,
+        ...options,
+      } as RenderOptions<Q>) as RenderResult<Q>;
       this.testKitsMap.ReactTestKitWithQueries.seedRenderResult(rtlResult);
       return this.result;
     },
@@ -124,7 +139,7 @@ export function createReactTestRunnerWithQueries<
       this.run();
       const Wrapper = getProviderStack(
         this.testKits,
-        getProviders ? (getProviders as (() => Wrapper)).bind(this) : undefined
+        getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
       return rtlRenderHook(hook, { wrapper: Wrapper, ...renderOptions, ...options });
     },
@@ -133,12 +148,12 @@ export function createReactTestRunnerWithQueries<
   const merged = {
     ...builtIn,
     ...(extraMethods ?? {}),
-  } as (ExtraMethods & ReactRenderMethodsQ<Q, AllKits>) & ThisType<
-    AppRunnerWithExtraMethods<AllKits, ExtraMethods> &
-    ReactRenderMethodsQ<Q, AllKits>
-  >;
+  } as (ExtraMethods & ReactRenderMethodsQ<Q, AllKits>) &
+    ThisType<AppRunnerWithExtraMethods<AllKits, ExtraMethods> & ReactRenderMethodsQ<Q, AllKits>>;
 
-  return createBaseTestRunner(allKits, merged) as unknown as
-    AppRunnerWithExtraMethods<AllKits, ExtraMethods> &
+  return createBaseTestRunner(allKits, merged) as unknown as AppRunnerWithExtraMethods<
+    AllKits,
+    ExtraMethods
+  > &
     ReactRenderMethodsQ<Q, AllKits>;
 }

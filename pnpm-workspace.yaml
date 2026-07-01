@@ -3,12 +3,12 @@ packages:
   - test-apps/**
 
 allowBuilds:
-  '@swc/core': true
+  "@swc/core": true
   protobufjs: true
   unrs-resolver: true
 
 catalog:
   lodash-es: 4.17.21
   type-fest: 4.37.0
-  '@types/lodash': 4.14.195
+  "@types/lodash": 4.14.195
   rimraf: 4.4.1

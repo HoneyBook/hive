@@ -10,7 +10,7 @@
 //     if (!real.endsWith('.ts') && !real.endsWith('.tsx')) return real;
 //     return siblingMockResolver(real) ?? mocksDirResolver(real) ?? real;
 //   };
-const { existsSync } = require('node:fs');
+const { existsSync } = require("node:fs");
 
 function siblingMockResolver(realPath) {
   const match = realPath.match(/^(.*)\.(tsx?)$/);
@@ -22,6 +22,6 @@ function siblingMockResolver(realPath) {
 
 module.exports = function mockSubstitutionResolver(request, options) {
   const real = options.defaultResolver(request, options);
-  if (!real.endsWith('.ts') && !real.endsWith('.tsx')) return real;
+  if (!real.endsWith(".ts") && !real.endsWith(".tsx")) return real;
   return siblingMockResolver(real) ?? real;
 };

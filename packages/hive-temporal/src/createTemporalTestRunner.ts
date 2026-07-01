@@ -1,19 +1,19 @@
-import { TestKit } from '@honeybook/hive';
-import type { CombinedTestKitsResult } from '@honeybook/hive';
-import { createBaseTestRunner } from '@honeybook/hive-runner';
-import type { RunnerFactory, NoMethods } from '@honeybook/hive-runner';
-import { Worker } from '@temporalio/worker';
-import { MockActivityEnvironment } from '@temporalio/testing';
-import type { TestWorkflowEnvironment } from '@temporalio/testing';
-import { TemporalTestKit } from './TemporalTestKit';
-import { TemporalConfigTestKit } from './TemporalConfigTestKit';
+import { TestKit } from "@honeybook/hive";
+import type { CombinedTestKitsResult } from "@honeybook/hive";
+import { createBaseTestRunner } from "@honeybook/hive-runner";
+import type { RunnerFactory, NoMethods } from "@honeybook/hive-runner";
+import { Worker } from "@temporalio/worker";
+import { MockActivityEnvironment } from "@temporalio/testing";
+import type { TestWorkflowEnvironment } from "@temporalio/testing";
+import { TemporalTestKit } from "./TemporalTestKit";
+import { TemporalConfigTestKit } from "./TemporalConfigTestKit";
 
 export const TEMPORAL_BASE_KITS = [TemporalTestKit, TemporalConfigTestKit] as const;
 export type TemporalBaseKits = typeof TEMPORAL_BASE_KITS;
 
 export type TemporalHandle = {
   testEnv: TestWorkflowEnvironment;
-  client: TestWorkflowEnvironment['client']; // full SDK surface (runner.client.workflow, runner.client.schedule, etc.)
+  client: TestWorkflowEnvironment["client"]; // full SDK surface (runner.client.workflow, runner.client.schedule, etc.)
   taskQueue: string;
   childTaskQueue: string | undefined;
   executeActivity: <F extends (input: any) => Promise<any>>(
@@ -87,7 +87,7 @@ export const createTemporalTestRunner: RunnerFactory<
         const worker = await Worker.create({
           connection: testEnv.nativeConnection,
           taskQueue,
-          namespace: 'default',
+          namespace: "default",
           ...mainWorkerConfig,
           activities: mainActivities,
         });
@@ -103,7 +103,7 @@ export const createTemporalTestRunner: RunnerFactory<
         const childWorker = await Worker.create({
           connection: testEnv.nativeConnection,
           taskQueue: childTaskQueue,
-          namespace: 'default',
+          namespace: "default",
           ...childWorkerConfig,
           activities: {},
         });
@@ -121,7 +121,7 @@ export const createTemporalTestRunner: RunnerFactory<
           input: Parameters<F>[0],
         ) => {
           const env = new MockActivityEnvironment({
-            workflowExecution: { workflowId: 'test-wf', runId: 'test-run' },
+            workflowExecution: { workflowId: "test-wf", runId: "test-run" },
           });
           return env.run(fn, input) as Promise<Awaited<ReturnType<F>>>;
         },

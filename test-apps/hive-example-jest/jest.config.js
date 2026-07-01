@@ -5,21 +5,19 @@
 // resolve back to their TypeScript sources — without it, ts-jest never sees the .ts
 // files and the resolver has nothing to redirect.
 module.exports = {
-  testEnvironment: 'node',
+  testEnvironment: "node",
   transform: {
-    '^.+\\.ts$': ['ts-jest', { diagnostics: false }],
+    "^.+\\.ts$": ["ts-jest", { diagnostics: false }],
     // Transform ESM JS from workspace packages (symlinked directly into node_modules)
-    '^.+\\.js$': ['ts-jest', { diagnostics: false }],
+    "^.+\\.js$": ["ts-jest", { diagnostics: false }],
   },
   // Default ignores node_modules; we must allow workspace packages through
-  transformIgnorePatterns: [
-    '/node_modules/.pnpm/',
-  ],
+  transformIgnorePatterns: ["/node_modules/.pnpm/"],
   moduleNameMapper: {
     // Strip .js extensions so ts-jest can resolve TypeScript sources
-    '^(\\.{1,2}/.*)\\.js$': '$1',
+    "^(\\.{1,2}/.*)\\.js$": "$1",
   },
-  resolver: require.resolve('./jest-resolver.cjs'),
-  setupFilesAfterEnv: ['@honeybook/hive-mock-adapter-jest/setup'],
+  resolver: require.resolve("./jest-resolver.cjs"),
+  setupFilesAfterEnv: ["@honeybook/hive-mock-adapter-jest/setup"],
   clearMocks: true,
 };
