@@ -5,7 +5,7 @@ Vitest integration for `@honeybook/hive-mock-adapter`. Provides a transparent si
 ## Installation
 
 ```bash
-pnpm add -D @honeybook/hive-mock-adapter-vitest vitest
+pnpm add -D @honeybook/hive-mock-adapter-vitest vitest@>=1
 ```
 
 ## Usage

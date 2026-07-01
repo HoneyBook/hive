@@ -11,7 +11,7 @@ For more info on the adapter pattern and why we use it, read: <!-- link to atlas
 ## Installation
 
 ```bash
-pnpm add -D @honeybook/hive-mock-adapter-jest jest @types/jest ts-jest
+pnpm add -D @honeybook/hive-mock-adapter-jest jest@>=29 @types/jest ts-jest
 ```
 
 ## Usage
