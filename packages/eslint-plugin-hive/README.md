@@ -29,11 +29,13 @@ export default [
 Bans `jest.mock()` / `vi.mock()`. Use hive's MockAdapter pattern instead of raw module mocking.
 
 **Before:**
+
 ```ts
-vi.mock('./greeter');
+vi.mock("./greeter");
 ```
 
 **After:**
+
 ```ts
 // greeter.mock.ts
 export class GreeterMock {
@@ -51,12 +53,14 @@ With `mockSubstitutionPlugin` configured in vitest, imports automatically resolv
 Bans `jest.spyOn()` / `vi.spyOn()`. Use hive's MockAdapter pattern — spies are injected automatically.
 
 **Before:**
+
 ```ts
 const greeter = new Greeter();
-vi.spyOn(greeter, 'greet');
+vi.spyOn(greeter, "greet");
 ```
 
 **After:**
+
 ```ts
 const greeter = new MockAdapter(Greeter);
 // Every method is auto-spied; use greeter.greet.mock.calls, etc.
