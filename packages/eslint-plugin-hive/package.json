@@ -1,0 +1,43 @@
+{
+  "name": "@honeybook/eslint-plugin-hive",
+  "version": "0.0.0",
+  "description": "ESLint rules enforcing hive's MockAdapter pattern over raw jest/vitest mocking APIs",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -b tsconfig.build.json && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@typescript-eslint/utils": "8.59.1"
+  },
+  "peerDependencies": {
+    "eslint": "^9"
+  },
+  "devDependencies": {
+    "@types/jest": "30.0.0",
+    "@typescript-eslint/parser": "8.59.1",
+    "eslint": "9.31.0",
+    "jest": "30.2.0",
+    "rimraf": "catalog:",
+    "ts-jest": "29.4.5",
+    "typescript": "6.0.3"
+  }
+}
