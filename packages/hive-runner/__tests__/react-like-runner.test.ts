@@ -1,7 +1,7 @@
 import { TestKit } from "@honeybook/hive";
 import type { Constructor } from "type-fest";
 import { createBaseTestRunner } from "../src/createBaseTestRunner";
-import type { AppRunnerWithExtraMethods, RunnerFactory } from "../src/types";
+import type { AppRunnerWithExtraMethods, NoExecuteFn, RunnerFactory } from "../src/types";
 
 // --- Test kit ---
 class UserKit extends TestKit {
@@ -50,11 +50,7 @@ function createReactLikeRunner<
   ) as unknown as AppRunnerWithExtraMethods<[...KitsClasses], MergedMethods>;
 }
 
-// TODO(T-07): _factoryTypeCheck type annotation is broken — RunnerFactory expects
-// BaseKits (KitClassArray), not method object. This check was aspirational but
-// the type signature doesn't support what it's trying to verify. Commenting out
-// to unblock pre-push hook; proper fix requires type system redesign.
-// const _factoryTypeCheck: RunnerFactory<{ render(): void }> = createReactLikeRunner;
+const _factoryTypeCheck: RunnerFactory<[], NoExecuteFn, { render(): void }> = createReactLikeRunner;
 
 describe("createBaseTestRunner — react-like wrapping factory (Pattern A)", () => {
   beforeEach(() => {
