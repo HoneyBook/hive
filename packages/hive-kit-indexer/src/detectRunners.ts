@@ -1,12 +1,6 @@
-import path from "node:path";
-import { Node, type ExportedDeclarations, type SourceFile } from "ts-morph";
-import type { RunnerEntry } from "./types";
-
-function toDistSourcePath(packageDir: string, absoluteFilePath: string): string {
-  const relFromPackage = path.relative(packageDir, absoluteFilePath);
-  const jsRel = relFromPackage.replace(/\.tsx?$/, ".js");
-  return path.join("dist", jsRel).split(path.sep).join("/");
-}
+import { Node, type CompilerOptions, type ExportedDeclarations, type SourceFile } from "ts-morph";
+import { resolveSourceFilePath } from "./resolveSourceFilePath";
+import type { RunnerEntry, SourceFilePathMode } from "./types";
 
 /** Peels an optional `as const` wrapper to reach the array literal, if any. */
 function getArrayElementNames(initializer: Node): string[] {
@@ -46,7 +40,12 @@ interface FileCandidates {
  * named export) produces no runner entry — this is the locked contract,
  * not a bug to work around.
  */
-export function detectRunners(sourceFile: SourceFile, packageDir: string): RunnerEntry[] {
+export function detectRunners(
+  sourceFile: SourceFile,
+  packageDir: string,
+  sourceFilePathMode: SourceFilePathMode,
+  compilerOptions: CompilerOptions,
+): RunnerEntry[] {
   const byFile = new Map<string, FileCandidates>();
 
   for (const [name, declarations] of sourceFile.getExportedDeclarations()) {
@@ -74,7 +73,7 @@ export function detectRunners(sourceFile: SourceFile, packageDir: string): Runne
     }
     runners.push({
       factoryName: candidates.factories[0],
-      sourceFile: toDistSourcePath(packageDir, filePath),
+      sourceFile: resolveSourceFilePath(sourceFilePathMode, packageDir, compilerOptions, filePath),
       forcedBaseKits: getArrayElementNames(candidates.baseKitsInitializer),
     });
   }

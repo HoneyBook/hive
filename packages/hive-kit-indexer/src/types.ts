@@ -36,3 +36,18 @@ export interface KitIndex {
   kits: KitEntry[];
   runners: RunnerEntry[];
 }
+
+/**
+ * "dist" (default): sourceFile is a compiled build-output path, derived
+ * from the target package's own tsconfig rootDir/outDir. Preserves
+ * hive's existing behavior byte-for-byte.
+ *
+ * "source": sourceFile is the raw path relative to packageDir, untouched —
+ * for live/unbuilt source trees (e.g. a future atlas-service consumer of
+ * this package as an importable API rather than the CLI).
+ */
+export type SourceFilePathMode = "dist" | "source";
+
+export interface KitIndexOptions {
+  sourceFilePathMode?: SourceFilePathMode;
+}
