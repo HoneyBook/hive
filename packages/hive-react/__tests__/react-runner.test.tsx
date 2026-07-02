@@ -2,8 +2,8 @@ import React from "react";
 import { screen, buildQueries } from "@testing-library/react";
 import { TestKit } from "@honeybook/hive";
 import type { IProviderTestKit } from "../src/IProviderTestKit";
-import { createReactTestRunner } from "../src/createReactTestRunner";
-import { createReactTestRunnerWithQueries } from "../src/createReactTestRunnerWithQueries";
+import { createReactTestRunner } from "../src/createReactTestRunner.test-runner";
+import { createReactTestRunnerWithQueries } from "../src/createReactTestRunnerWithQueries.test-runner";
 
 // ─── Test kits ─────────────────────────────────────────────────────────────
 

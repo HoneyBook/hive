@@ -5,8 +5,8 @@ import type { RunnerFactory, NoMethods } from "@honeybook/hive-runner";
 import { Worker } from "@temporalio/worker";
 import { MockActivityEnvironment } from "@temporalio/testing";
 import type { TestWorkflowEnvironment } from "@temporalio/testing";
-import { TemporalTestKit } from "./TemporalTestKit";
-import { TemporalConfigTestKit } from "./TemporalConfigTestKit";
+import { TemporalTestKit } from "./TemporalTestKit.test-kit";
+import { TemporalConfigTestKit } from "./TemporalConfigTestKit.test-kit";
 
 export const TEMPORAL_BASE_KITS = [TemporalTestKit, TemporalConfigTestKit] as const;
 export type TemporalBaseKits = typeof TEMPORAL_BASE_KITS;

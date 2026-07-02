@@ -1,5 +1,5 @@
 import express from "express";
-import { createExpressTestRunner } from "../src/createExpressTestRunner";
+import { createExpressTestRunner } from "../src/createExpressTestRunner.test-runner";
 
 // ─── Inline Express app ─────────────────────────────────────────────────────
 

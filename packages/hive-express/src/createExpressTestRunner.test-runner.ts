@@ -3,7 +3,7 @@ import type { CombinedTestKitsResult } from "@honeybook/hive";
 import { createBaseTestRunner } from "@honeybook/hive-runner";
 import type { RunnerFactory, NoMethods } from "@honeybook/hive-runner";
 import supertest from "supertest";
-import { RequestConfigTestKit } from "./RequestConfigTestKit";
+import { RequestConfigTestKit } from "./RequestConfigTestKit.test-kit";
 
 export const EXPRESS_BASE_KITS = [RequestConfigTestKit] as const;
 export type ExpressBaseKits = typeof EXPRESS_BASE_KITS;
