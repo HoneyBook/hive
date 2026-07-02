@@ -50,7 +50,9 @@ export type ReactRenderMethods<BaseKits extends TestKitClasses> = {
 
 function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): Wrapper {
   const kitStack = generateProviderStack(testKits);
-  if (!extraProvider) return kitStack;
+  if (!extraProvider) {
+    return kitStack;
+  }
   // Lazy — extraProvider() called inside the returned Wrapper, at React render time
   const KitStack = kitStack;
   const Wrapped: Wrapper = ({ children }) => {

@@ -6,5 +6,7 @@ export function registerReset(fn: ResetFn): void {
 }
 
 export function cleanupMockAdapters(): void {
-  for (const fn of resets) fn();
+  for (const fn of resets) {
+    fn();
+  }
 }

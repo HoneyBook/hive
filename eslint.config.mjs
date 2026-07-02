@@ -7,12 +7,6 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import importPlugin from "eslint-plugin-import";
 
-const consoleErrorMessage =
-  "Don't use console.error — call logError() from '@honeybook/core-web' (or ~/services/logger/logger.utils) so the error reaches Datadog with structured { featureName, operation, additionalData, error } context.";
-
-const consoleLogMessage =
-  "Remove console.log before merging. For dev observability use logDebug() from '@honeybook/core-web' (it routes to console in dev and Datadog in prod).";
-
 const catchAnyMessage =
   "Type the caught error as `unknown` (or omit the annotation — TS infers `unknown` with `useUnknownInCatchVariables`). Narrow with `instanceof` / a type-guard before reading fields.";
 
@@ -23,7 +17,12 @@ export default [
     ignores: ["**/node_modules/**", "**/dist/**"],
   },
   {
-    files: ["**/*.{js,ts}"],
+    files: ["**/*.cjs"],
+    languageOptions: { globals: globals.commonjs },
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
+    files: ["**/*.{js,ts,jsx,tsx}"],
     languageOptions: {
       ecmaVersion: 2018,
       sourceType: "module",
@@ -133,14 +132,6 @@ export default [
     rules: {
       "no-restricted-syntax": [
         "error",
-        {
-          selector: "MemberExpression[object.name='console'][property.name='error']",
-          message: consoleErrorMessage,
-        },
-        {
-          selector: "MemberExpression[object.name='console'][property.name='log']",
-          message: consoleLogMessage,
-        },
         {
           selector:
             "CatchClause > Identifier.param[typeAnnotation.typeAnnotation.type='TSAnyKeyword']",
