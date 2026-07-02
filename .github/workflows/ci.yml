@@ -22,9 +22,9 @@ jobs:
         env:
           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
       - run: pnpm install
-      - run: turbo run build
-      - run: turbo run typecheck
-      - run: turbo run lint
+      - run: pnpm run build
+      - run: pnpm run typecheck
+      - run: pnpm run lint
       - run: pnpm format:check
 
   test-verification:
@@ -56,6 +56,7 @@ jobs:
         env:
           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
       - run: pnpm install
+      - run: pnpm run build
       - run: pnpm --filter "${{ matrix.package }}" test
 
   ci-gate:
