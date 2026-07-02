@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build-verification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Configure Cloudsmith auth
+        run: echo "//npm.cloudsmith.io/honeybook/npmjs/:_authToken=${CLOUDSMITH_API_KEY}" >> ~/.npmrc
+        env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+      - run: pnpm install
+      - run: turbo run build
+      - run: turbo run typecheck
+      - run: turbo run lint
+      - run: pnpm format:check
+
+  test-verification:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - "@honeybook/hive"
+          - "@honeybook/hive-runner"
+          - "@honeybook/hive-react"
+          - "@honeybook/hive-express"
+          - "@honeybook/hive-temporal"
+          - "@honeybook/hive-kit-indexer"
+          - "@honeybook/eslint-plugin-hive"
+          - "@honeybook/hive-temporal-example"
+          - "@honeybook/hive-example-jest"
+          - "@honeybook/hive-example-vitest"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Configure Cloudsmith auth
+        run: echo "//npm.cloudsmith.io/honeybook/npmjs/:_authToken=${CLOUDSMITH_API_KEY}" >> ~/.npmrc
+        env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+      - run: pnpm install
+      - run: pnpm --filter "${{ matrix.package }}" test
+
+  ci-gate:
+    runs-on: ubuntu-latest
+    needs: [build-verification, test-verification]
+    if: always()
+    steps:
+      - name: Verify all checks passed
+        run: |
+          if [ "${{ needs.build-verification.result }}" != "success" ] || [ "${{ needs.test-verification.result }}" != "success" ]; then
+            exit 1
+          fi
