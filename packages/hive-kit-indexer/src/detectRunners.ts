@@ -1,5 +1,10 @@
 import { Node, type CompilerOptions, type ExportedDeclarations, type SourceFile } from "ts-morph";
 import { resolveSourceFilePath } from "./resolveSourceFilePath";
+import {
+  BASE_RUNNER_FACTORY_NAMES,
+  getAllFactoryCandidates,
+  resolveForcedBaseKits,
+} from "./resolveComposition";
 import type { RunnerEntry, SourceFilePathMode } from "./types";
 
 /** Peels an optional `as const` wrapper to reach the array literal, if any. */
@@ -33,49 +38,89 @@ interface FileCandidates {
 
 /**
  * Detects each runner factory's forced base kits via the `*_BASE_KITS`
- * const-array export convention (EXPRESS_BASE_KITS, TEMPORAL_BASE_KITS,
- * REACT_BASE_KITS) — never by statically analyzing the factory function
- * body. A factory with no same-file `*_BASE_KITS` export (e.g.
- * createReactTestRunnerWithQueries, which inlines its kit array with no
- * named export) produces no runner entry — this is the locked contract,
- * not a bug to work around.
+ * const-array export convention ("exports" mode — EXPRESS_BASE_KITS,
+ * TEMPORAL_BASE_KITS, REACT_BASE_KITS) — never by statically analyzing the
+ * factory function body. A factory with no same-file `*_BASE_KITS` export
+ * (e.g. createReactTestRunnerWithQueries, which inlines its kit array with
+ * no named export) produces no runner entry — this is the locked contract,
+ * not a bug to work around. "exports" mode runs this exact byte-identical
+ * logic over `sourceFiles[0]`.
+ *
+ * "all" mode (discover mode only) generalizes this: every factory-shaped
+ * declaration in every discovered source file, export status ignored, is
+ * resolved via real call-graph composition analysis
+ * (resolveForcedBaseKits) instead of the same-file `*_BASE_KITS`
+ * convention. A factory whose terminal call doesn't bottom out at a
+ * recognizable runner primitive/wrap is skipped (naming false positive).
  */
 export function detectRunners(
-  sourceFile: SourceFile,
+  sourceFiles: SourceFile[],
+  scanMode: "exports" | "all",
   packageDir: string,
   sourceFilePathMode: SourceFilePathMode,
   compilerOptions: CompilerOptions,
 ): RunnerEntry[] {
-  const byFile = new Map<string, FileCandidates>();
-
-  for (const [name, declarations] of sourceFile.getExportedDeclarations()) {
-    for (const declaration of declarations) {
-      const filePath = declaration.getSourceFile().getFilePath();
-      const candidates = byFile.get(filePath) ?? { factories: [] };
-
-      if (name.endsWith("_BASE_KITS") && Node.isVariableDeclaration(declaration)) {
-        candidates.baseKitsName = name;
-        candidates.baseKitsInitializer = declaration.getInitializer();
-      } else if (isFactoryDeclaration(declaration)) {
-        if (!candidates.factories.includes(name)) {
-          candidates.factories.push(name);
-        }
-      }
-
-      byFile.set(filePath, candidates);
-    }
-  }
-
   const runners: RunnerEntry[] = [];
-  for (const [filePath, candidates] of byFile) {
-    if (!candidates.baseKitsInitializer || candidates.factories.length !== 1) {
-      continue;
+
+  if (scanMode === "exports") {
+    const sourceFile = sourceFiles[0];
+    const byFile = new Map<string, FileCandidates>();
+
+    for (const [name, declarations] of sourceFile.getExportedDeclarations()) {
+      for (const declaration of declarations) {
+        const filePath = declaration.getSourceFile().getFilePath();
+        const candidates = byFile.get(filePath) ?? { factories: [] };
+
+        if (name.endsWith("_BASE_KITS") && Node.isVariableDeclaration(declaration)) {
+          candidates.baseKitsName = name;
+          candidates.baseKitsInitializer = declaration.getInitializer();
+        } else if (isFactoryDeclaration(declaration)) {
+          if (!candidates.factories.includes(name)) {
+            candidates.factories.push(name);
+          }
+        }
+
+        byFile.set(filePath, candidates);
+      }
     }
-    runners.push({
-      factoryName: candidates.factories[0],
-      sourceFile: resolveSourceFilePath(sourceFilePathMode, packageDir, compilerOptions, filePath),
-      forcedBaseKits: getArrayElementNames(candidates.baseKitsInitializer),
-    });
+
+    for (const [filePath, candidates] of byFile) {
+      if (!candidates.baseKitsInitializer || candidates.factories.length !== 1) {
+        continue;
+      }
+      runners.push({
+        factoryName: candidates.factories[0],
+        sourceFile: resolveSourceFilePath(
+          sourceFilePathMode,
+          packageDir,
+          compilerOptions,
+          filePath,
+        ),
+        forcedBaseKits: getArrayElementNames(candidates.baseKitsInitializer),
+      });
+    }
+  } else {
+    for (const sf of sourceFiles) {
+      for (const { name, decl } of getAllFactoryCandidates(sf)) {
+        if (BASE_RUNNER_FACTORY_NAMES.has(name)) {
+          continue;
+        }
+        const forcedBaseKits = resolveForcedBaseKits(decl, packageDir);
+        if (forcedBaseKits === null) {
+          continue;
+        }
+        runners.push({
+          factoryName: name,
+          sourceFile: resolveSourceFilePath(
+            sourceFilePathMode,
+            packageDir,
+            compilerOptions,
+            decl.getSourceFile().getFilePath(),
+          ),
+          forcedBaseKits,
+        });
+      }
+    }
   }
 
   return runners.sort((a, b) => a.factoryName.localeCompare(b.factoryName));
