@@ -11,6 +11,9 @@ function makeApp() {
   app.get("/echo-header", (req, res) => {
     res.json({ value: req.header("x-test") });
   });
+  app.get("/echo-cookies", (req, res) => {
+    res.json({ cookies: req.headers.cookie ?? null });
+  });
   return app;
 }
 
@@ -51,6 +54,51 @@ describe("createExpressTestRunner", () => {
     await runner.run();
     const res = await runner.request.get("/echo-header");
     expect(res.body.value).toBe("hdr-value");
+  });
+
+  it("withCookies seeds the agent's real cookie jar (sent on requests)", async () => {
+    const runner = createExpressTestRunner([]);
+    runner.withCookies(["session_token=abc123; Path=/", "session_cache=cached-value; Path=/"]);
+    runner.withApp(() => makeApp());
+    await runner.run();
+
+    const res = await runner.request.get("/echo-cookies");
+    expect(res.body.cookies).toContain("session_token=abc123");
+    expect(res.body.cookies).toContain("session_cache=cached-value");
+  });
+
+  it("withCookies-seeded cookies can be individually expired via the jar afterward", async () => {
+    const runner = createExpressTestRunner([]);
+    runner.withCookies(["session_token=abc123; Path=/", "session_cache=cached-value; Path=/"]);
+    runner.withApp(() => makeApp());
+    await runner.run();
+
+    // A real client would drop an expired cookie entirely before sending the
+    // next request — this must line up with the domain execute() seeds
+    // cookies against (127.0.0.1), or the jar treats it as an unrelated,
+    // non-colliding cookie and the original is never overridden.
+    runner.request.jar.setCookies(
+      "session_cache=; expires=Thu, 01 Jan 1970 00:00:00 GMT",
+      "127.0.0.1",
+      "/",
+    );
+
+    const res = await runner.request.get("/echo-cookies");
+    expect(res.body.cookies).toContain("session_token=abc123");
+    expect(res.body.cookies).not.toContain("session_cache");
+  });
+
+  it("withCookies and withHeaders compose — cookie jar and static headers both apply", async () => {
+    const runner = createExpressTestRunner([]);
+    runner.withCookies(["session_token=abc123; Path=/"]);
+    runner.withHeaders({ "x-test": "hdr-value" });
+    runner.withApp(() => makeApp());
+    await runner.run();
+
+    const cookieRes = await runner.request.get("/echo-cookies");
+    expect(cookieRes.body.cookies).toContain("session_token=abc123");
+    const headerRes = await runner.request.get("/echo-header");
+    expect(headerRes.body.value).toBe("hdr-value");
   });
 
   it("consumer void extraMethod still chains", () => {

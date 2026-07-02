@@ -32,6 +32,14 @@ export const createExpressTestRunner: RunnerFactory<
       const kit = this.testKitsMap.RequestConfigTestKit;
       const app = kit.result.app!;
       const agent = supertest.agent(app);
+      if (kit.result.cookies.length > 0) {
+        // supertest.agent(app) with no explicit host always issues requests
+        // against 127.0.0.1 (its internal ephemeral server binds there) — the
+        // jar's domain-matching requires this to line up exactly, both for
+        // these cookies to be sent at all and for a consumer's later
+        // jar.setCookies(..., "127.0.0.1", "/") calls to override them.
+        agent.jar.setCookies(kit.result.cookies, "127.0.0.1", "/");
+      }
       if (Object.keys(kit.result.headers).length > 0) {
         agent.set(kit.result.headers);
       }
