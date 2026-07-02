@@ -47,11 +47,18 @@ type IntersectTuple<T extends readonly unknown[]> = T extends readonly [infer He
  * for why this matters when kits are composed across a still-generic wrapper
  * layer (e.g. a factory that adds its own base kits and stays generic over
  * caller-supplied `extraKits`).
+ *
+ * Recurses into `CombinedTestKitsResultFromClasses<Sources[I]>` (itself) rather
+ * than assuming `Sources[I]` is always a plain, already-flattened array — a
+ * slot can itself be a nested `MergedTestKits` (from a wrapped wrapper).
+ * `Sources` is never pre-flattened (see `MergedTestKits`), so this recursion is
+ * what makes N-layer nesting resolve correctly instead of relying on the
+ * `{ [I in keyof Sources]: ... }` mapping alone.
  */
 export type CombinedTestKitsResultFromClasses<TKClasses extends TestKitClasses> =
   TKClasses extends MergedTestKits<infer Sources>
     ? IntersectTuple<{
-        [I in keyof Sources]: CombinedTestKitsResult<TestKitsInstances<Sources[I]>>;
+        [I in keyof Sources]: CombinedTestKitsResultFromClasses<Sources[I]>;
       }>
     : CombinedTestKitsResult<TestKitsInstances<TKClasses>>;
 
@@ -103,12 +110,15 @@ type CombineTestKitsBuilderMethods<TestKits extends Array<TestKit>> = [TestKits[
 /**
  * Same as `CombineTestKitsBuilderMethods`, computed from TestKit classes, per
  * tracked source when `TKClasses` is a `MergedTestKits` composite — see
- * `CombinedTestKitsResultFromClasses`/`MergedTestKits`.
+ * `CombinedTestKitsResultFromClasses`/`MergedTestKits`. Recurses into
+ * `CombineTestKitsBuilderMethodsFromClasses<Sources[I]>` (itself) for the same
+ * reason `CombinedTestKitsResultFromClasses` does — a slot may itself be a
+ * nested `MergedTestKits`, since `Sources` is never pre-flattened.
  */
 type CombineTestKitsBuilderMethodsFromClasses<TKClasses extends TestKitClasses> =
   TKClasses extends MergedTestKits<infer Sources>
     ? IntersectTuple<{
-        [I in keyof Sources]: CombineTestKitsBuilderMethods<TestKitsInstances<Sources[I]>>;
+        [I in keyof Sources]: CombineTestKitsBuilderMethodsFromClasses<Sources[I]>;
       }>
     : CombineTestKitsBuilderMethods<TestKitsInstances<TKClasses>>;
 
