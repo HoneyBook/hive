@@ -16,7 +16,7 @@ import type {
   RenderHookResult,
 } from "@testing-library/react";
 import { generateProviderStack } from "./generateProviderStack";
-import { ReactTestKitWithQueries } from "./ReactTestKit";
+import { ReactTestKitWithQueries } from "./ReactTestKit.test-kit";
 
 type Wrapper = NonNullable<RenderOptions["wrapper"]>;
 

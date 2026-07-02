@@ -1,5 +1,5 @@
-import { createTemporalTestRunner } from "../src/createTemporalTestRunner";
-import type { TemporalHandle } from "../src/createTemporalTestRunner";
+import { createTemporalTestRunner } from "../src/createTemporalTestRunner.test-runner";
+import type { TemporalHandle } from "../src/createTemporalTestRunner.test-runner";
 
 // The import of createTemporalTestRunner pulls in TemporalTestKit which
 // calls setupTemporalHarness() at module-import time — registers beforeAll/afterAll
