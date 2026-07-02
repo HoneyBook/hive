@@ -11,8 +11,11 @@ const KIT_BASE_CLASS_NAMES = new Set(["TestKit", "AsyncTestKit"]);
  * for TestKit or AsyncTestKit. Never string-matches the class's own name or
  * its filename, so an interface like IProviderTestKit (no heritage clause,
  * no class declaration at all) never qualifies.
+ *
+ * Exported so resolveComposition.ts (discover-mode composition analysis)
+ * can reuse the identical base-chain walk instead of duplicating it.
  */
-function isTestKitClass(classDecl: ClassDeclaration): boolean {
+export function isTestKitClass(classDecl: ClassDeclaration): boolean {
   let current = classDecl.getBaseClass();
   while (current) {
     if (KIT_BASE_CLASS_NAMES.has(current.getName() ?? "")) {
@@ -88,40 +91,75 @@ function extractResultFields(classDecl: ClassDeclaration, packageDir: string): R
   return [{ field: "result", type: type.getText(resultProp) }];
 }
 
+/** Builds the KitEntry for a class already confirmed to be a TestKit/AsyncTestKit subclass. */
+function buildKitEntry(
+  declaration: ClassDeclaration,
+  className: string,
+  packageDir: string,
+  sourceFilePathMode: SourceFilePathMode,
+  compilerOptions: CompilerOptions,
+): KitEntry {
+  return {
+    className,
+    sourceFile: resolveSourceFilePath(
+      sourceFilePathMode,
+      packageDir,
+      compilerOptions,
+      declaration.getSourceFile().getFilePath(),
+    ),
+    methods: extractMethods(declaration),
+    result: extractResultFields(declaration, packageDir),
+  };
+}
+
 /**
- * Detects every exported class in `sourceFile` (the package entry point)
- * whose base-class chain includes TestKit/AsyncTestKit, using
- * getExportedDeclarations() to stay robust to aliased/renamed exports —
- * this is filename-independent by construction.
+ * Detects TestKit/AsyncTestKit subclasses across either a single entry
+ * `SourceFile` ("exports" mode — the package's curated public API, scanned
+ * via getExportedDeclarations() to stay robust to aliased/renamed exports)
+ * or a discovered set of `SourceFile`s ("all" mode — every class matching
+ * the `discover` glob, regardless of export status).
+ *
+ * "exports" mode runs the exact byte-identical loop this function has
+ * always run — the else-branch of generateKitIndex's zero-config path is
+ * untouched by discover mode's existence.
  */
 export function detectKits(
-  sourceFile: SourceFile,
+  sourceFiles: SourceFile[],
+  scanMode: "exports" | "all",
   packageDir: string,
   sourceFilePathMode: SourceFilePathMode,
   compilerOptions: CompilerOptions,
 ): KitEntry[] {
   const kits: KitEntry[] = [];
 
-  for (const declarations of sourceFile.getExportedDeclarations().values()) {
-    for (const declaration of declarations) {
-      if (!Node.isClassDeclaration(declaration) || !isTestKitClass(declaration)) {
-        continue;
+  if (scanMode === "exports") {
+    const sourceFile = sourceFiles[0];
+    for (const declarations of sourceFile.getExportedDeclarations().values()) {
+      for (const declaration of declarations) {
+        if (!Node.isClassDeclaration(declaration) || !isTestKitClass(declaration)) {
+          continue;
+        }
+        const className = declaration.getName();
+        if (!className) {
+          continue;
+        }
+        kits.push(
+          buildKitEntry(declaration, className, packageDir, sourceFilePathMode, compilerOptions),
+        );
       }
-      const className = declaration.getName();
-      if (!className) {
-        continue;
+    }
+  } else {
+    for (const sourceFile of sourceFiles) {
+      for (const cls of sourceFile.getClasses()) {
+        if (!isTestKitClass(cls)) {
+          continue;
+        }
+        const className = cls.getName();
+        if (!className) {
+          continue;
+        }
+        kits.push(buildKitEntry(cls, className, packageDir, sourceFilePathMode, compilerOptions));
       }
-      kits.push({
-        className,
-        sourceFile: resolveSourceFilePath(
-          sourceFilePathMode,
-          packageDir,
-          compilerOptions,
-          declaration.getSourceFile().getFilePath(),
-        ),
-        methods: extractMethods(declaration),
-        result: extractResultFields(declaration, packageDir),
-      });
     }
   }
 

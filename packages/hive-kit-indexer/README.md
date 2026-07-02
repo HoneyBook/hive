@@ -16,6 +16,13 @@ const index = generateKitIndex("/path/to/packages/hive-express");
 const liveIndex = generateKitIndex("/path/to/atlas-service", {
   sourceFilePathMode: "source",
 });
+
+// A consuming service whose TestKit subclasses are scattered across
+// src/** rather than curated through a barrel index.ts — use `discover`:
+const discoveredIndex = generateKitIndex("/path/to/atlas-service", {
+  discover: { include: ["src/**/*.ts"], exclude: ["src/legacy/**"] },
+  sourceFilePathMode: "source",
+});
 ```
 
 `generateKitIndex(packageDir: string, options?: KitIndexOptions): KitIndex`
@@ -30,6 +37,7 @@ to find concrete classes whose base-class chain includes `TestKit` or
 ```ts
 interface KitIndexOptions {
   sourceFilePathMode?: "dist" | "source"; // default: "dist"
+  discover?: { include: string[]; exclude?: string[] };
 }
 ```
 
@@ -43,6 +51,20 @@ interface KitIndexOptions {
   untransformed (`.ts`/`.tsx` extension kept, no `dist/` prefix). Use this
   when analyzing a **live/unbuilt source tree directly** — e.g. a service
   that isn't consumed as an installed npm package.
+- **`discover`** — when provided, **replaces** (not merges with) the
+  default `packageDir/index.ts`-export scan: source files are found by
+  resolving `include`/`exclude` as globs against `packageDir`, entirely
+  independent of the target's own `tsconfig.json` `include` array (the
+  tsconfig is still used for type resolution — module resolution,
+  `rootDir`/`outDir`, path aliases — just never for file membership).
+  Every glob-matched `TestKit`/`AsyncTestKit` class and runner factory is
+  indexed regardless of export status. A `discover.include` glob that
+  matches zero files throws rather than emitting an empty index.
+  `discover` and `sourceFilePathMode` are orthogonal: `discover` controls
+  _how files are found_, `sourceFilePathMode` controls _how a found file's
+  path is written into `sourceFile`_ — the common pairing for a
+  discover-mode consumer is `discover` + `sourceFilePathMode: "source"`,
+  but nothing forces it.
 
 ## CLI
 
@@ -110,4 +132,19 @@ Load-bearing rules:
 - Runner detection is anchored on the `*_BASE_KITS` const-array export
   convention in the same source file as the factory — not on statically
   analyzing the factory function body. A factory with no same-file
-  `*_BASE_KITS` export produces no `runners` entry.
+  `*_BASE_KITS` export produces no `runners` entry. This remains the
+  mechanism in the default (non-`discover`) mode.
+- **Composition detection** (`discover` mode only): a factory's
+  `forcedBaseKits` is resolved by real static call-graph analysis instead
+  of the `*_BASE_KITS` convention — it walks the factory body's terminal
+  call expression, recursing through same-repo wrapped factories and
+  unioning each layer's own unconditionally-added kits (excluding
+  caller-supplied pass-through kits) until it bottoms out at a base-runner
+  primitive. Recursion is capped at depth 10; a cycle or exceeding the cap
+  throws rather than truncating silently. A factory whose terminal call
+  doesn't resolve to a recognizable runner primitive/wrap (e.g. a
+  `create*TestRunner`-named function that doesn't actually wrap anything)
+  produces no `runners` entry — naming alone is never sufficient. Wrapping
+  a runner from another package reads that package's already-published
+  `node_modules/<pkg>/dist/kit-index.json` rather than re-deriving
+  analysis against its source.

@@ -4,6 +4,8 @@ import type { KitEntry, RunnerEntry } from "../src/types";
 
 const FIXTURE_DIR = path.join(__dirname, "fixtures");
 const FIXTURE_ROOT_SRC_DIR = path.join(__dirname, "fixtures-root-src");
+const FIXTURE_DISCOVER_DIR = path.join(__dirname, "fixtures-discover");
+const FIXTURE_CYCLE_DIR = path.join(__dirname, "fixtures-cycle");
 
 describe("generateKitIndex", () => {
   const index = generateKitIndex(FIXTURE_DIR);
@@ -122,5 +124,57 @@ describe("generateKitIndex against a package with rootDir 'src' (default 'dist' 
       (r: RunnerEntry) => r.factoryName === "createRootSrcTestRunner",
     );
     expect(runner?.sourceFile).toBe("dist/rootSrcRunner.test-runner.js");
+  });
+});
+
+describe("generateKitIndex discover mode", () => {
+  const index = generateKitIndex(FIXTURE_DISCOVER_DIR, {
+    discover: { include: ["src/**/*.ts"], exclude: ["src/_shim/**", "src/legacy/**"] },
+    sourceFilePathMode: "source",
+  });
+
+  it("indexes a scattered, unexported kit outside the tsconfig include array", () => {
+    expect(index.kits.some((k: KitEntry) => k.className === "ScatteredKit")).toBe(true);
+  });
+
+  it("accumulates a 3-layer composed runner's forced base kits base-first", () => {
+    const runner = index.runners.find((r: RunnerEntry) => r.factoryName === "createFlowTestRunner");
+    expect(runner?.forcedBaseKits).toEqual(["CoreKitA", "CoreKitB", "CxKit", "FlowKit"]);
+  });
+
+  it("accumulates a 2-layer composed runner's forced base kits base-first", () => {
+    const runner = index.runners.find((r: RunnerEntry) => r.factoryName === "createCxTestRunner");
+    expect(runner?.forcedBaseKits).toEqual(["CoreKitA", "CoreKitB", "CxKit"]);
+  });
+
+  it("excludes a naming false positive that wraps nothing", () => {
+    expect(index.runners.some((r: RunnerEntry) => r.factoryName === "createFakeTestRunner")).toBe(
+      false,
+    );
+  });
+
+  it("excludes a real runner whose file is glob-excluded", () => {
+    expect(index.runners.some((r: RunnerEntry) => r.factoryName === "createLegacyTestRunner")).toBe(
+      false,
+    );
+  });
+
+  it("resolves cross-package composition via the wrapped package's published dist/kit-index.json", () => {
+    const runner = index.runners.find((r: RunnerEntry) => r.factoryName === "createXpkgTestRunner");
+    expect(runner?.forcedBaseKits).toEqual(["WrappedKitX", "WrappedKitY", "LocalKit"]);
+  });
+});
+
+it("throws on zero glob match", () => {
+  expect(() =>
+    generateKitIndex(FIXTURE_DISCOVER_DIR, { discover: { include: ["no-such-dir/**/*.ts"] } }),
+  ).toThrow();
+});
+
+describe("composition cycle", () => {
+  it("throws instead of infinitely recursing", () => {
+    expect(() =>
+      generateKitIndex(FIXTURE_CYCLE_DIR, { discover: { include: ["src/**/*.ts"] } }),
+    ).toThrow(/cycle|depth/i);
   });
 });

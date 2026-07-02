@@ -48,6 +48,19 @@ export interface KitIndex {
  */
 export type SourceFilePathMode = "dist" | "source";
 
+/**
+ * When provided, replaces (not merges with) the default `index.ts`-export
+ * scan: source files are discovered by resolving `include`/`exclude` as
+ * globs against `packageDir`, independent of the target's own
+ * `tsconfig.json` `include` array. Every glob-matched TestKit/AsyncTestKit
+ * class and runner factory is indexed regardless of export status.
+ */
+export interface DiscoverOptions {
+  include: string[];
+  exclude?: string[];
+}
+
 export interface KitIndexOptions {
   sourceFilePathMode?: SourceFilePathMode;
+  discover?: DiscoverOptions;
 }
