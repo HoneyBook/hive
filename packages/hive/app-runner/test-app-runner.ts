@@ -4,24 +4,26 @@ import {
   buildTestKitRecordFromArray,
   collectImplicitDependenciesDeep,
 } from "../test-kits/test-kit.utils";
-import { TestKitArrayToRecord } from "../test-kits/test-kits.types";
-import { CombinedTestKitsResult, TestKitsInstances } from "./app-runner.types";
+import { TestKitArrayToRecord, TestKitClasses } from "../test-kits/test-kits.types";
+import { CombinedTestKitsResultFromClasses, TestKitsInstances } from "./app-runner.types";
 import { AppRunnerWithChainableTestKitsMethods } from "./app-runner.types";
-import { Constructor } from "type-fest";
 
 /** Combines test kits that describe a specific app for tests. */
 export abstract class TestAppRunner<
-  TestKitsClasses extends Array<new () => TestKit>,
-  TestKits extends TestKitsInstances<TestKitsClasses> = TestKitsInstances<TestKitsClasses>,
+  KitsClasses extends TestKitClasses,
+  TestKits extends TestKitsInstances<KitsClasses> = TestKitsInstances<KitsClasses>,
 > {
   protected testKits: TestKits;
   protected testKitsMap: TestKitArrayToRecord<TestKits>;
 
-  get result(): CombinedTestKitsResult<TestKits> {
-    return Object.assign({}, ...this.testKits.map((testKit) => testKit.result));
+  get result(): CombinedTestKitsResultFromClasses<KitsClasses> {
+    return Object.assign(
+      {},
+      ...this.testKits.map((testKit) => testKit.result),
+    ) as CombinedTestKitsResultFromClasses<KitsClasses>;
   }
 
-  constructor({ testKitsClasses }: { testKitsClasses: TestKitsClasses }) {
+  constructor({ testKitsClasses }: { testKitsClasses: KitsClasses }) {
     const testKits = testKitsClasses.map((testKitClass) => new testKitClass());
     const testKitsMap = buildTestKitRecordFromArray<TestKits>(testKits);
     const impliedTestKitsMap = collectImplicitDependenciesDeep(testKitsMap);
@@ -104,13 +106,15 @@ export abstract class TestAppRunner<
     });
   }
 
-  abstract run(): CombinedTestKitsResult<TestKits> | Promise<CombinedTestKitsResult<TestKits>>;
+  abstract run():
+    | CombinedTestKitsResultFromClasses<KitsClasses>
+    | Promise<CombinedTestKitsResultFromClasses<KitsClasses>>;
 }
 
 export const createAppRunner = <
-  TestKitsClasses extends Array<Constructor<TestKit>>,
-  TestKits extends Array<InstanceType<TestKitsClasses[number]>>,
-  AppRunner extends TestAppRunner<TestKitsClasses, TestKits>,
+  KitsClasses extends TestKitClasses,
+  TestKits extends Array<InstanceType<KitsClasses[number]>>,
+  AppRunner extends TestAppRunner<KitsClasses, TestKits>,
 >({
   appRunnerClass,
 }: {
@@ -120,5 +124,5 @@ export const createAppRunner = <
 
   appRunner.setup();
 
-  return appRunner as AppRunnerWithChainableTestKitsMethods<TestKitsClasses, AppRunner>;
+  return appRunner as AppRunnerWithChainableTestKitsMethods<KitsClasses, AppRunner>;
 };

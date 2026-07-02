@@ -2,7 +2,7 @@ import React from "react";
 import { TestKit } from "@honeybook/hive";
 import type { CombinedTestKitsResult } from "@honeybook/hive";
 import { createBaseTestRunner } from "@honeybook/hive-runner";
-import type { AppRunnerWithExtraMethods, KitClassArray } from "@honeybook/hive-runner";
+import type { AppRunnerWithExtraMethods, TestKitClasses } from "@honeybook/hive-runner";
 import {
   render as rtlRender,
   renderHook as rtlRenderHook,
@@ -67,7 +67,7 @@ function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): W
  *   typed to Q instead of the default query set.
  */
 export function createReactTestRunnerWithQueries<
-  KitsClasses extends KitClassArray,
+  KitsClasses extends TestKitClasses,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ExtraMethods extends Record<string, (...args: any[]) => unknown> = Record<never, never>,
   Q extends Queries = typeof defaultQueries,

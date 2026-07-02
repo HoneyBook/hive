@@ -1,7 +1,7 @@
 import React from "react";
 import { TestKit } from "@honeybook/hive";
 import { createBaseTestRunner } from "@honeybook/hive-runner";
-import type { RunnerFactory, NoExecuteFn, KitClassArray } from "@honeybook/hive-runner";
+import type { RunnerFactory, NoExecuteFn, TestKitClasses } from "@honeybook/hive-runner";
 import type { CombinedTestKitsResult } from "@honeybook/hive";
 import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
 import type {
@@ -31,7 +31,7 @@ export type ReactBaseKits = typeof REACT_BASE_KITS;
  * For createReactTestRunner, render() returns CombinedTestKitsResult<[ReactTestKit]> = RenderResult.
  * For a derived factory with more BaseKits, render() returns the richer combined type.
  */
-export type ReactRenderMethods<BaseKits extends KitClassArray> = {
+export type ReactRenderMethods<BaseKits extends TestKitClasses> = {
   render(
     component: React.ReactElement,
     options?: RenderOptions,

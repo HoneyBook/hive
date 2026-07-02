@@ -1,10 +1,10 @@
-import { TestKit, TestAppRunner, createAppRunner, AsyncTestKit } from "@honeybook/hive";
+import { TestAppRunner, createAppRunner, AsyncTestKit } from "@honeybook/hive";
 import type {
-  CombinedTestKitsResult,
+  CombinedTestKitsResultFromClasses,
   TestKitsInstances,
   TestKitArrayToRecord,
+  TestKitClasses,
 } from "@honeybook/hive";
-import type { Constructor } from "type-fest";
 import type { AppRunnerWithExtraMethods } from "./types";
 
 /**
@@ -33,29 +33,26 @@ import type { AppRunnerWithExtraMethods } from "./types";
  * isn't this a real-environment test?") — the named wrappers are the real work.
  */
 
-// Loose defaults for the runtime concrete subclass (ExtendedAppRunner constructs
-// with a runtime-built kit array). The class stays GENERIC over its kit classes —
-// like hb-react's HbTestAppRunner — so AppRunnerWithExtraMethods can re-narrow
-// `result` / `testKitsMap` to the actual kits instead of collapsing to `unknown`.
-type AnyTestKitClasses = Array<Constructor<TestKit>>;
-
 type ExecuteFn = (this: BaseTestRunner) => object | Promise<object>;
 
+// The class stays GENERIC over its kit classes — like hb-react's HbTestAppRunner —
+// so AppRunnerWithExtraMethods can re-narrow `result` / `testKitsMap` to the actual
+// kits instead of collapsing to `unknown`.
 export class BaseTestRunner<
-  TestKitsClasses extends Array<new () => TestKit> = AnyTestKitClasses,
-  TestKits extends TestKitsInstances<TestKitsClasses> = TestKitsInstances<TestKitsClasses>,
-> extends TestAppRunner<TestKitsClasses, TestKits> {
+  KitsClasses extends TestKitClasses = TestKitClasses,
+  TestKits extends TestKitsInstances<KitsClasses> = TestKitsInstances<KitsClasses>,
+> extends TestAppRunner<KitsClasses, TestKits> {
   private _execute?: ExecuteFn;
-  private _runPromise: Promise<CombinedTestKitsResult<TestKits>> | null = null;
+  private _runPromise: Promise<CombinedTestKitsResultFromClasses<KitsClasses>> | null = null;
 
-  run(): Promise<CombinedTestKitsResult<TestKits>> {
+  run(): Promise<CombinedTestKitsResultFromClasses<KitsClasses>> {
     if (!this._runPromise) {
       this._runPromise = this._doRun();
     }
     return this._runPromise;
   }
 
-  private async _doRun(): Promise<CombinedTestKitsResult<TestKits>> {
+  private async _doRun(): Promise<CombinedTestKitsResultFromClasses<KitsClasses>> {
     // 1. Init kits with defaults (sync, hive)
     this.initAllTestKitsWithDefaults();
 
@@ -90,29 +87,29 @@ export class BaseTestRunner<
  *   Omit to get the kit-only escape hatch (never imports app).
  */
 export function createBaseTestRunner<
-  KitsClasses extends Array<Constructor<TestKit>> = [],
+  KitsClasses extends TestKitClasses = readonly [],
   ExtraMethods extends Record<string, (...args: any[]) => unknown> = Record<never, never>,
   Handle extends object = Record<never, never>,
 >(
-  kits: readonly [...KitsClasses],
+  kits: KitsClasses,
   // ThisType binds `this` inside each extra method to the full runner (chainable
   // with* methods + the other extra methods + a typed `result`) plus `testKitsMap`
   // for direct kit access — mirroring hb-react's createHbTestAppRunner.
   extraMethods?: ExtraMethods &
     ThisType<
-      AppRunnerWithExtraMethods<[...KitsClasses], ExtraMethods> & {
-        testKitsMap: TestKitArrayToRecord<TestKitsInstances<[...KitsClasses]>>;
+      AppRunnerWithExtraMethods<KitsClasses, ExtraMethods> & {
+        testKitsMap: TestKitArrayToRecord<TestKitsInstances<KitsClasses>>;
       }
     >,
   // execute is for non-React runners. ThisType binds its `this` to the same
   // full runner, so the hook reads kit results — e.g. an AuthTestKit's `authedUser`
   // — off the now-properly-typed `this.result` with no casts.
   execute?: (() => Handle | Promise<Handle>) &
-    ThisType<AppRunnerWithExtraMethods<[...KitsClasses], ExtraMethods>>,
-): AppRunnerWithExtraMethods<[...KitsClasses], ExtraMethods, Handle> {
+    ThisType<AppRunnerWithExtraMethods<KitsClasses, ExtraMethods>>,
+): AppRunnerWithExtraMethods<KitsClasses, ExtraMethods, Handle> {
   // Dedup by class so a kit listed twice (or pulled in as another's dependency)
   // isn't instantiated twice.
-  const allKitsClasses = [...new Set(kits)] as unknown as AnyTestKitClasses;
+  const allKitsClasses = [...new Set(kits)] as unknown as TestKitClasses;
 
   class ExtendedAppRunner extends BaseTestRunner {
     constructor() {
@@ -139,5 +136,5 @@ export function createBaseTestRunner<
 
   return createAppRunner({
     appRunnerClass: ExtendedAppRunner,
-  }) as unknown as AppRunnerWithExtraMethods<[...KitsClasses], ExtraMethods, Handle>;
+  }) as unknown as AppRunnerWithExtraMethods<KitsClasses, ExtraMethods, Handle>;
 }

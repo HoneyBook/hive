@@ -4,6 +4,16 @@ import {
   CollectDeepDependencies,
   TestKitInstanceTupleToClassTypeTuple,
 } from "./test-kits.internal-types";
+
+/**
+ * Canonical type for "an array of TestKit constructor types" — the shape every
+ * runner factory's `kits` argument, `BaseKits`, and `dependentTestKitClasses`
+ * conform to. Use this instead of inlining `Array<new () => TestKit>` /
+ * `ReadonlyArray<Constructor<TestKit>>` — those are the same type spelled
+ * differently and should not accumulate independently across packages.
+ */
+export type TestKitClasses = ReadonlyArray<new () => TestKit>;
+
 /**
  * Helper type to convert an array of TestKit classes to a record of TestKit classes.
  *

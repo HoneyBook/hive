@@ -1,13 +1,11 @@
-import { TestKit } from "@honeybook/hive";
 import type {
   AppRunnerWithChainableTestKitsMethods,
   TestKitsInstances,
   TestKitArrayToRecord,
+  TestKitClasses,
+  MergeTestKits,
 } from "@honeybook/hive";
 import type { BaseTestRunner } from "./createBaseTestRunner";
-
-/** Constraint for arrays of zero-argument TestKit constructors. */
-export type KitClassArray = ReadonlyArray<new () => TestKit>;
 
 // Sentinel types — used as defaults in RunnerFactory to signal "no extra methods"
 // and "no execute hook". Never extends `void` to avoid collapsing conditional types.
@@ -44,7 +42,7 @@ export type RunnerMethodMap<
  * The inlined form is semantically identical to RunnerMethodMap<ExtraMethods, Self>.
  */
 export type AppRunnerWithExtraMethods<
-  AllKitsClasses extends Array<new () => TestKit>,
+  AllKitsClasses extends TestKitClasses,
   ExtraMethods extends Record<string, (...args: any[]) => unknown>,
   Handle extends object = Record<never, never>,
 > = AppRunnerWithChainableTestKitsMethods<
@@ -62,11 +60,11 @@ export type AppRunnerWithExtraMethods<
 >;
 
 export type RunnerThis<
-  KitsClasses extends KitClassArray,
+  KitsClasses extends TestKitClasses,
   ExtraMethods extends Record<string, (...args: any[]) => unknown> = Record<never, never>,
   Handle extends object = Record<never, never>,
-> = AppRunnerWithExtraMethods<[...KitsClasses], ExtraMethods, Handle> & {
-  testKitsMap: TestKitArrayToRecord<TestKitsInstances<[...KitsClasses]>>;
+> = AppRunnerWithExtraMethods<KitsClasses, ExtraMethods, Handle> & {
+  testKitsMap: TestKitArrayToRecord<TestKitsInstances<KitsClasses>>;
 };
 
 // Internal helper — collapses `[never]` (no PlatformArg) to an empty rest tuple,
@@ -85,20 +83,29 @@ type ResolveNever<T, Fallback extends object> = [T] extends [never] ? Fallback :
  * BaseMethods = methods the factory always provides (render, renderHook, …)
  * PlatformArg = third factory param type, or never if unused
  *
- * The return type is AppRunnerWithExtraMethods<[...BaseKits, ...KitsClasses], ...>,
+ * The return type is AppRunnerWithExtraMethods<MergeTestKits<[BaseKits, KitsClasses]>, ...>,
  * so runner.result includes both pre-seeded and user-provided kit results.
+ *
+ * BaseKits and KitsClasses are combined via MergeTestKits, NOT `[...BaseKits, ...KitsClasses]`.
+ * This is what makes wrapping a wrapper (any number of layers deep) work: a wrapper factory
+ * that adds its own base kits and stays generic over caller-supplied extraKits needs to call
+ * ITS OWN base kits' methods from inside its own body, while extraKits is still an unresolved
+ * generic parameter. Flattening into one array first would make that lookup fail — see
+ * MergedTestKits in @honeybook/hive for the full mechanism. KitsClasses may itself already be
+ * a MergedTestKits (passed down from an outer wrapper layer) — MergeTestKits flattens rather
+ * than nesting, so depth is unlimited and every layer uses the identical composition.
  *
  * BaseMethods are intersected DIRECTLY into the return type (not through
  * RunnerMethodMap / AppRunnerWithExtraMethods). This preserves generic
  * method signatures such as renderHook<Result, Props>(...).
  */
 export type RunnerFactory<
-  BaseKits extends KitClassArray,
+  BaseKits extends TestKitClasses,
   ExecuteFn extends object = NoExecuteFn,
   BaseMethods extends object = Record<never, never>,
   PlatformArg = never,
 > = <
-  KitsClasses extends KitClassArray,
+  KitsClasses extends TestKitClasses,
   // Defaults directly to Record<never, never> (not NoMethods/never + ResolveNever) —
   // ExtraMethods is inferred per-call from the extraMethods argument, and feeding a
   // conditional type built FROM ExtraMethods back into that same argument's ThisType
@@ -112,7 +119,7 @@ export type RunnerFactory<
   extraMethods?: ExtraMethods &
     ThisType<
       AppRunnerWithExtraMethods<
-        [...BaseKits, ...KitsClasses],
+        MergeTestKits<[BaseKits, KitsClasses]>,
         ExtraMethods,
         ResolveNever<ExecuteFn, Record<never, never>>
       > &
@@ -120,7 +127,7 @@ export type RunnerFactory<
     >,
   ...rest: PlatformArgs<PlatformArg>
 ) => AppRunnerWithExtraMethods<
-  [...BaseKits, ...KitsClasses],
+  MergeTestKits<[BaseKits, KitsClasses]>,
   ExtraMethods,
   ResolveNever<ExecuteFn, Record<never, never>>
 > &

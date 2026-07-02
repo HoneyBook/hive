@@ -14,20 +14,23 @@ export {
   buildTestKitRecordFromArray,
   collectImplicitDependenciesDeep,
 } from "./test-kits/test-kit.utils";
+export { mergeTestKits } from "./test-kits/merge-test-kits";
 
 // Public types
 export type {
+  TestKitClasses,
   TestKitArrayToRecord,
   DependsOn,
   TestKitDeepDependencies,
   TestKitsDeepDependencies,
 } from "./test-kits/test-kits.types";
+export type { MergedTestKits, MergeTestKits } from "./test-kits/merge-test-kits";
 
 // App runner types
 export type {
-  TestKitsClasses,
   TestKitsInstances,
   CombinedTestKitsResult,
+  CombinedTestKitsResultFromClasses,
   WithTestKitMethodBuilderSupport,
   AppRunnerWithChainableTestKitsMethods,
 } from "./app-runner/app-runner.types";
