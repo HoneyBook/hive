@@ -5,9 +5,13 @@ export type MockResolver = (realAbsolutePath: string) => string | null;
 
 export function siblingMockResolver(realAbsolutePath: string): string | null {
   const match = realAbsolutePath.match(/^(.*)\.(tsx?)$/);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   const candidate = `${match[1]}.mock.${match[2]}`;
-  if (existsSync(candidate)) return candidate;
+  if (existsSync(candidate)) {
+    return candidate;
+  }
   return null;
 }
 
@@ -15,7 +19,9 @@ export function mocksDirResolver(realAbsolutePath: string): string | null {
   const dir = dirname(realAbsolutePath);
   const filename = realAbsolutePath.slice(dir.length + 1);
   const candidate = resolve(dir, "__mocks__", filename);
-  if (existsSync(candidate)) return candidate;
+  if (existsSync(candidate)) {
+    return candidate;
+  }
   return null;
 }
 
@@ -28,7 +34,9 @@ const mockSubstitutionResolver = (
   },
 ): string => {
   const real = options.defaultResolver(request, options);
-  if (!real.endsWith(".ts") && !real.endsWith(".tsx")) return real;
+  if (!real.endsWith(".ts") && !real.endsWith(".tsx")) {
+    return real;
+  }
   const mock = siblingMockResolver(real);
   return mock ?? real;
 };

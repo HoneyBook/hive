@@ -6,9 +6,13 @@ export type MockResolver = (realAbsolutePath: string) => string | null;
 
 export function siblingMockResolver(realAbsolutePath: string): string | null {
   const match = realAbsolutePath.match(/^(.*)\.(tsx?)$/);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   const candidate = `${match[1]}.mock.${match[2]}`;
-  if (existsSync(candidate)) return candidate;
+  if (existsSync(candidate)) {
+    return candidate;
+  }
   return null;
 }
 
@@ -16,7 +20,9 @@ export function mocksDirResolver(realAbsolutePath: string): string | null {
   const dir = dirname(realAbsolutePath);
   const filename = realAbsolutePath.slice(dir.length + 1);
   const candidate = resolve(dir, "__mocks__", filename);
-  if (existsSync(candidate)) return candidate;
+  if (existsSync(candidate)) {
+    return candidate;
+  }
   return null;
 }
 
@@ -44,14 +50,20 @@ export function mockSubstitutionPlugin(opts: {
     name: "mock-substitution",
     enforce: "pre",
     resolveId(importee, importer) {
-      if (!importer) return null;
+      if (!importer) {
+        return null;
+      }
       const importerDir = dirname(importer);
       const resolvedJs = resolve(importerDir, importee);
       const resolvedTs = resolvedJs.replace(/\.js$/, ".ts");
       // Only intercept files that are in the eligible set
-      if (!eligiblePaths.has(resolvedTs)) return null;
+      if (!eligiblePaths.has(resolvedTs)) {
+        return null;
+      }
       const mock = resolverFn(resolvedTs);
-      if (mock) return { id: mock };
+      if (mock) {
+        return { id: mock };
+      }
       return null;
     },
   };

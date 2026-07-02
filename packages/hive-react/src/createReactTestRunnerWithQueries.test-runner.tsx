@@ -42,7 +42,9 @@ type ReactRenderMethodsQ<Q extends Queries, AllKits extends Array<new () => Test
 
 function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): Wrapper {
   const kitStack = generateProviderStack(testKits);
-  if (!extraProvider) return kitStack;
+  if (!extraProvider) {
+    return kitStack;
+  }
   const KitStack = kitStack;
   const Wrapped: Wrapper = ({ children }) => {
     const ExtraProvider = extraProvider();
