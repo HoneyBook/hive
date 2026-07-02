@@ -1,6 +1,7 @@
 {
-  "name": "@honeybook/hive-react",
-  "version": "0.1.0-beta.5",
+  "name": "@honeybook/hive-kit-indexer",
+  "version": "0.1.0-beta.1",
+  "description": "Generates a kit-index.json manifest of a hive package's TestKit/AsyncTestKit subclasses, their with* methods, and runner forced-base-kits — for downstream consumers like skill-ladder generators.",
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,6 +12,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "bin": {
+    "hive-kit-indexer": "./dist/cjs/src/cli.js"
+  },
   "files": [
     "dist"
   ],
@@ -19,31 +23,20 @@
     "registry": "https://npm.cloudsmith.io/honeybook/npmjs/"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -b tsconfig.build.json && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json && hive-kit-indexer",
+    "build": "rimraf dist && tsc -b tsconfig.build.json && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "jest"
   },
   "dependencies": {
-    "@honeybook/hive": "workspace:*",
-    "@honeybook/hive-runner": "workspace:*",
-    "type-fest": "catalog:"
-  },
-  "peerDependencies": {
-    "@testing-library/react": ">=11",
-    "react": ">=17"
+    "ts-morph": "28.0.0"
   },
   "devDependencies": {
-    "@honeybook/hive-kit-indexer": "workspace:*",
-    "@testing-library/react": "16.3.0",
+    "@honeybook/hive": "workspace:*",
     "@types/jest": "30.0.0",
-    "@types/react": "19.1.6",
-    "@types/react-dom": "19.1.6",
+    "@types/node": "26.0.1",
     "jest": "30.2.0",
-    "jest-environment-jsdom": "30.2.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
     "rimraf": "catalog:",
     "ts-jest": "29.4.5",
     "typescript": "6.0.3"
