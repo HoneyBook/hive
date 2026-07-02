@@ -1,7 +1,8 @@
 import path from "node:path";
-import { Node, type ClassDeclaration, type SourceFile } from "ts-morph";
+import { Node, type ClassDeclaration, type CompilerOptions, type SourceFile } from "ts-morph";
 import { classifyMethodKind, getMethodJsDoc } from "./classifyMethod";
-import type { KitEntry, MethodEntry, ResultField } from "./types";
+import { resolveSourceFilePath } from "./resolveSourceFilePath";
+import type { KitEntry, MethodEntry, ResultField, SourceFilePathMode } from "./types";
 
 const KIT_BASE_CLASS_NAMES = new Set(["TestKit", "AsyncTestKit"]);
 
@@ -20,15 +21,6 @@ function isTestKitClass(classDecl: ClassDeclaration): boolean {
     current = current.getBaseClass();
   }
   return false;
-}
-
-/**
- * `src/Foo.test-kit.ts` (rootDir ".", outDir "dist") -> `dist/src/Foo.test-kit.js`.
- */
-function toDistSourcePath(packageDir: string, sourceFile: SourceFile): string {
-  const relFromPackage = path.relative(packageDir, sourceFile.getFilePath());
-  const jsRel = relFromPackage.replace(/\.tsx?$/, ".js");
-  return path.join("dist", jsRel).split(path.sep).join("/");
 }
 
 function isDeclaredInsidePackage(packageDir: string, declarationFilePath: string): boolean {
@@ -102,7 +94,12 @@ function extractResultFields(classDecl: ClassDeclaration, packageDir: string): R
  * getExportedDeclarations() to stay robust to aliased/renamed exports —
  * this is filename-independent by construction.
  */
-export function detectKits(sourceFile: SourceFile, packageDir: string): KitEntry[] {
+export function detectKits(
+  sourceFile: SourceFile,
+  packageDir: string,
+  sourceFilePathMode: SourceFilePathMode,
+  compilerOptions: CompilerOptions,
+): KitEntry[] {
   const kits: KitEntry[] = [];
 
   for (const declarations of sourceFile.getExportedDeclarations().values()) {
@@ -116,7 +113,12 @@ export function detectKits(sourceFile: SourceFile, packageDir: string): KitEntry
       }
       kits.push({
         className,
-        sourceFile: toDistSourcePath(packageDir, declaration.getSourceFile()),
+        sourceFile: resolveSourceFilePath(
+          sourceFilePathMode,
+          packageDir,
+          compilerOptions,
+          declaration.getSourceFile().getFilePath(),
+        ),
         methods: extractMethods(declaration),
         result: extractResultFields(declaration, packageDir),
       });

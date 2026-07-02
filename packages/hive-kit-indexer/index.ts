@@ -6,4 +6,6 @@ export type {
   MethodKind,
   RunnerEntry,
   ResultField,
+  KitIndexOptions,
+  SourceFilePathMode,
 } from "./src/types";

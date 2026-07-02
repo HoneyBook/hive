@@ -3,6 +3,7 @@ import { generateKitIndex } from "../src/generateKitIndex";
 import type { KitEntry, RunnerEntry } from "../src/types";
 
 const FIXTURE_DIR = path.join(__dirname, "fixtures");
+const FIXTURE_ROOT_SRC_DIR = path.join(__dirname, "fixtures-root-src");
 
 describe("generateKitIndex", () => {
   const index = generateKitIndex(FIXTURE_DIR);
@@ -89,5 +90,37 @@ describe("generateKitIndex", () => {
       (r: RunnerEntry) => r.factoryName === "createFixtureRunnerNoBaseKits",
     );
     expect(runner).toBeUndefined();
+  });
+});
+
+describe("generateKitIndex with sourceFilePathMode: 'source'", () => {
+  const index = generateKitIndex(FIXTURE_DIR, { sourceFilePathMode: "source" });
+
+  it("emits the raw source path for a kit, untransformed", () => {
+    const seederKit = index.kits.find((k) => k.className === "SeederKit");
+    expect(seederKit?.sourceFile).toBe("src/SeederKit.test-kit.ts");
+  });
+
+  it("emits the raw source path for a runner, untransformed", () => {
+    const runner = index.runners.find(
+      (r: RunnerEntry) => r.factoryName === "createFixtureTestRunner",
+    );
+    expect(runner?.sourceFile).toBe("src/exampleRunner.test-runner.ts");
+  });
+});
+
+describe("generateKitIndex against a package with rootDir 'src' (default 'dist' mode)", () => {
+  const index = generateKitIndex(FIXTURE_ROOT_SRC_DIR);
+
+  it("does not duplicate the src/ segment under dist/ (regression for the T-10a hardcoded-dist bug)", () => {
+    const kit = index.kits.find((k) => k.className === "RootSrcKit");
+    expect(kit?.sourceFile).toBe("dist/RootSrcKit.test-kit.js");
+  });
+
+  it("applies the same rootDir-aware mapping to runner sourceFile paths", () => {
+    const runner = index.runners.find(
+      (r: RunnerEntry) => r.factoryName === "createRootSrcTestRunner",
+    );
+    expect(runner?.sourceFile).toBe("dist/rootSrcRunner.test-runner.js");
   });
 });
