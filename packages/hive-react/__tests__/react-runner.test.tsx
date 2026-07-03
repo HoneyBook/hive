@@ -47,10 +47,10 @@ class UserKit extends TestKit {
 // ─── Tests ─────────────────────────────────────────────────────────────────
 
 describe("createReactTestRunner", () => {
-  it("render() fires run() without awaiting and returns runner.result with RTL query functions", async () => {
+  it("render() fires run() without awaiting and returns runner.result with RTL result nested under .ui", async () => {
     const runner = createReactTestRunner([UserKit]);
     const result = runner.render(<div data-testid="target">hello</div>);
-    expect(result.getByTestId("target").textContent).toBe("hello");
+    expect(result.ui.getByTestId("target").textContent).toBe("hello");
     await expect(runner.run()).resolves.toBeDefined();
   });
 
@@ -94,7 +94,7 @@ describe("createReactTestRunner", () => {
     // then call render on the original runner.
     runner.withCustomId().withUserId("chained-test");
     const result = runner.render(<div data-testid="chained">ok</div>);
-    expect(result.getByTestId("chained")).toBeTruthy();
+    expect(result.ui.getByTestId("chained")).toBeTruthy();
   });
 
   it("getProviders wraps INSIDE the kit provider stack", () => {
@@ -110,15 +110,15 @@ describe("createReactTestRunner", () => {
     expect(outer.contains(extra)).toBe(true);
   });
 
-  it("runner.result contains both kit results and RTL query functions after render", () => {
+  it("runner.result contains both kit results and the RTL render result nested under .ui after render", () => {
     const runner = createReactTestRunner([UserKit]);
     runner.withUserId("test-123");
     runner.render(<div data-testid="check">rendered</div>);
     // Kit result — typed on runner.result
     expect(runner.result.userId).toBe("test-123");
-    // RTL result seeded into runner.result via ReactTestKit; ReactTestKit is now in BaseKits
-    // so runner.result includes getByTestId without any cast.
-    expect(runner.result.getByTestId("check").textContent).toBe("rendered");
+    // RTL result seeded into runner.result.ui via ReactTestKit; ReactTestKit is now in BaseKits
+    // so runner.result.ui.getByTestId is available without any cast.
+    expect(runner.result.ui.getByTestId("check").textContent).toBe("rendered");
   });
 
   it("withBeforeRender: is chainable and returns the same runner", () => {
@@ -135,7 +135,7 @@ describe("createReactTestRunner", () => {
     });
     const result = runner.render(<div data-testid="br">x</div>);
     expect(seen).toEqual(["br-render"]);
-    expect(result.getByTestId("br")).toBeTruthy();
+    expect(result.ui.getByTestId("br")).toBeTruthy();
   });
 
   it("withBeforeRender: fires before renderComponent() and before function-form component resolves", () => {
@@ -206,7 +206,7 @@ describe("createReactTestRunnerWithQueries", () => {
 
     const runner = createReactTestRunnerWithQueries([UserKit], undefined, undefined, customQueries);
     runner.render(<div data-custom="foo">bar</div>);
-    const el = runner.result.getByDataCustom("foo") as HTMLElement;
+    const el = runner.result.ui.getByDataCustom("foo") as HTMLElement;
     expect(el.textContent).toBe("bar");
   });
 
