@@ -23,16 +23,22 @@ type Wrapper = NonNullable<RenderOptions["wrapper"]>;
 // GetProviders: no arg, returns a Wrapper. Bound to runner this via ThisType<> at call site.
 type GetProviders = () => Wrapper;
 
+// A constructor type for ReactTestKitWithQueries instantiated with the caller's actual Q —
+// the bare `typeof ReactTestKitWithQueries` class reference always resolves to the class's
+// *default* type parameter at the type level, silently dropping any custom Q the caller
+// passed to createReactTestRunnerWithQueries.
+type ReactTestKitWithQueriesOf<Q extends Queries> = new () => ReactTestKitWithQueries<Q>;
+
 interface ReactRenderMethodsQ<Q extends Queries, AllKits extends Array<new () => TestKit>> {
   withBeforeRender(
     callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
   ): this;
   render(
-    component: React.ReactElement,
+    component?: React.ReactElement,
     options?: RenderOptions<Q>,
   ): CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
   renderComponent(
-    component:
+    component?:
       | React.ReactElement
       | ((result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => React.ReactElement),
     options?: RenderOptions<Q>,
@@ -70,6 +76,10 @@ function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): W
  * @param getProviders - Optional extra provider factory (no arg; accesses runner via this).
  * @param customQueries - Custom RTL query object. When provided, render/renderHook return results
  *   typed to Q instead of the default query set.
+ *
+ * component is optional on render()/renderComponent() — omit it when the content
+ * under test is mounted by a kit's own Provider() instead of passed explicitly;
+ * the provider stack is then rendered alone via an empty fragment.
  */
 export function createReactTestRunnerWithQueries<
   KitsClasses extends TestKitClasses,
@@ -80,21 +90,23 @@ export function createReactTestRunnerWithQueries<
   kits: KitsClasses,
   extraMethods?: ExtraMethods &
     ThisType<
-      AppRunnerWithExtraMethods<[typeof ReactTestKitWithQueries, ...KitsClasses], ExtraMethods> &
-        ReactRenderMethodsQ<Q, [typeof ReactTestKitWithQueries, ...KitsClasses]>
+      AppRunnerWithExtraMethods<[ReactTestKitWithQueriesOf<Q>, ...KitsClasses], ExtraMethods> &
+        ReactRenderMethodsQ<Q, [ReactTestKitWithQueriesOf<Q>, ...KitsClasses]>
     >,
   getProviders?: GetProviders &
     ThisType<
-      AppRunnerWithExtraMethods<[typeof ReactTestKitWithQueries, ...KitsClasses], ExtraMethods> &
-        ReactRenderMethodsQ<Q, [typeof ReactTestKitWithQueries, ...KitsClasses]>
+      AppRunnerWithExtraMethods<[ReactTestKitWithQueriesOf<Q>, ...KitsClasses], ExtraMethods> &
+        ReactRenderMethodsQ<Q, [ReactTestKitWithQueriesOf<Q>, ...KitsClasses]>
     >,
   customQueries?: Q,
-): AppRunnerWithExtraMethods<[typeof ReactTestKitWithQueries, ...KitsClasses], ExtraMethods> &
-  ReactRenderMethodsQ<Q, [typeof ReactTestKitWithQueries, ...KitsClasses]> {
-  type AllKits = [typeof ReactTestKitWithQueries, ...KitsClasses];
+): AppRunnerWithExtraMethods<[ReactTestKitWithQueriesOf<Q>, ...KitsClasses], ExtraMethods> &
+  ReactRenderMethodsQ<Q, [ReactTestKitWithQueriesOf<Q>, ...KitsClasses]> {
+  type AllKits = [ReactTestKitWithQueriesOf<Q>, ...KitsClasses];
 
-  // ReactTestKitWithQueries is generic but we instantiate it as a class constructor here.
-  // The type parameter Q flows through RenderResult<Q> via seedRenderResult.
+  // ReactTestKitWithQueries is generic but we instantiate it as a bare class constructor
+  // here — same class at runtime regardless of Q. AllKits[0] (ReactTestKitWithQueriesOf<Q>)
+  // is what carries Q at the type level; the cast below only bridges the runtime bare-class
+  // reference to that type, it isn't what makes Q flow through.
   const allKits = [ReactTestKitWithQueries, ...kits] as unknown as [...AllKits];
   const beforeRenderCallbacks: Array<
     (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void
@@ -121,7 +133,10 @@ export function createReactTestRunnerWithQueries<
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
-      const rtlResult = rtlRender(component, {
+      // No component means the content under test lives inside a kit's Provider() —
+      // render the provider stack alone via an empty fragment, matching the
+      // long-standing zero-arg convention this factory replaces.
+      const rtlResult = rtlRender(component ?? <></>, {
         wrapper: Wrapper,
         ...renderOptions,
         ...options,
@@ -136,7 +151,8 @@ export function createReactTestRunnerWithQueries<
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
-      const element = typeof component === "function" ? component(this.result) : component;
+      const element =
+        typeof component === "function" ? component(this.result) : (component ?? <></>);
       const rtlResult = rtlRender(element, {
         wrapper: Wrapper,
         ...renderOptions,

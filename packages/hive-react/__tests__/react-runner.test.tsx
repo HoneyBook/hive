@@ -5,6 +5,25 @@ import type { IProviderTestKit } from "../src/IProviderTestKit";
 import { createReactTestRunner } from "../src/createReactTestRunner.test-runner";
 import { createReactTestRunnerWithQueries } from "../src/createReactTestRunnerWithQueries.test-runner";
 
+// A kit that mounts real content via Provider() — mirrors honeybook-react's
+// LayoutAppTestKit pattern, where render() is called with zero arguments and
+// the content under test lives inside the provider stack instead.
+class ContentProviderKit extends TestKit implements IProviderTestKit {
+  result = {};
+  get name() {
+    return "ContentProviderKit";
+  }
+  defaultCallback = () => {};
+  Provider() {
+    return ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="content-under-test">
+        <span>mounted via Provider, not via render() argument</span>
+        {children}
+      </div>
+    );
+  }
+}
+
 // ─── Test kits ─────────────────────────────────────────────────────────────
 
 class OuterKit extends TestKit implements IProviderTestKit {
@@ -190,6 +209,18 @@ describe("createReactTestRunner", () => {
     runner.render(<div data-testid="acc">z</div>);
     expect(order).toEqual(["first", "second", "third"]);
   });
+
+  it("render() supports being called with no component — content supplied via a kit's Provider() — regression for the mandatory-component-arg bug", () => {
+    const runner = createReactTestRunner([ContentProviderKit]);
+    runner.render();
+    expect(screen.getByTestId("content-under-test")).toBeTruthy();
+  });
+
+  it("renderComponent() supports being called with no component — regression for the mandatory-component-arg bug", () => {
+    const runner = createReactTestRunner([ContentProviderKit]);
+    runner.renderComponent();
+    expect(screen.getByTestId("content-under-test")).toBeTruthy();
+  });
 });
 
 describe("createReactTestRunnerWithQueries", () => {
@@ -217,5 +248,34 @@ describe("createReactTestRunnerWithQueries", () => {
     runner.withBeforeRender((result) => seen.push(result.userId));
     runner.render(<div data-testid="brq">q</div>);
     expect(seen).toEqual(["brq"]);
+  });
+
+  it("render() supports being called with no component in the queries variant — regression for the mandatory-component-arg bug", () => {
+    const runner = createReactTestRunnerWithQueries([ContentProviderKit]);
+    runner.render();
+    expect(screen.getByTestId("content-under-test")).toBeTruthy();
+  });
+
+  it("render()'s declared return type threads the caller's custom Q, not just the runtime value — regression for the Q-erasure bug", () => {
+    const queryAllByDataCustom = (container: HTMLElement, value: string) =>
+      Array.from(container.querySelectorAll<HTMLElement>(`[data-custom="${value}"]`));
+    const [, , getByDataCustom] = buildQueries(
+      queryAllByDataCustom,
+      (_c, v) => `dup ${v}`,
+      (_c, v) => `missing ${v}`,
+    );
+    const customQueries = { queryAllByDataCustom, getByDataCustom };
+    const runner = createReactTestRunnerWithQueries([UserKit], undefined, undefined, customQueries);
+    runner.render(<div data-custom="foo">bar</div>);
+
+    // Type-level assertion, not just a runtime call: a concretely-typed consumer
+    // (mirrors honeybook-react's driver-constructor pattern) must accept `.ui`
+    // without needing a cast. A loose `.getByDataCustom(...)` call does NOT catch
+    // this bug — Q's wide default bound structurally admits any method name.
+    function consume(ui: { getByDataCustom(value: string): HTMLElement }) {
+      return ui;
+    }
+    const el = consume(runner.result.ui).getByDataCustom("foo");
+    expect(el.textContent).toBe("bar");
   });
 });

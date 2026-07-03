@@ -35,11 +35,11 @@ export interface ReactRenderMethods<AllKits extends TestKitClasses> {
     callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
   ): this;
   render(
-    component: React.ReactElement,
+    component?: React.ReactElement,
     options?: RenderOptions,
   ): CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
   renderComponent(
-    component:
+    component?:
       | React.ReactElement
       | ((result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => React.ReactElement),
     options?: RenderOptions,
@@ -78,6 +78,10 @@ function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): W
  * render(), renderHook(), renderComponent() call this.run() without awaiting
  * (fire-and-forget — React handles async state natively; tests use waitFor/findBy).
  * Provider stack: first kit in array = outermost provider.
+ *
+ * component is optional on render()/renderComponent() — omit it when the content
+ * under test is mounted by a kit's own Provider() instead of passed explicitly;
+ * the provider stack is then rendered alone via an empty fragment.
  *
  * A genuine generic function (not a RunnerFactory<...>-typed const) so AllKits — the
  * caller's full merged kit list — is available inside the body, mirroring
@@ -131,7 +135,13 @@ export function createReactTestRunner<
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
-      const rtlResult = rtlRender(component, { wrapper: Wrapper, ...options } as RenderOptions);
+      // No component means the content under test lives inside a kit's Provider() —
+      // render the provider stack alone via an empty fragment, matching the
+      // long-standing zero-arg convention this factory replaces.
+      const rtlResult = rtlRender(component ?? <></>, {
+        wrapper: Wrapper,
+        ...options,
+      } as RenderOptions);
       this.testKitsMap.ReactTestKit.seedRenderResult(rtlResult);
       return this.result;
     },
@@ -142,7 +152,8 @@ export function createReactTestRunner<
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
       );
-      const element = typeof component === "function" ? component(this.result) : component;
+      const element =
+        typeof component === "function" ? component(this.result) : (component ?? <></>);
       const rtlResult = rtlRender(element, { wrapper: Wrapper, ...options } as RenderOptions);
       this.testKitsMap.ReactTestKit.seedRenderResult(rtlResult);
       return this.result;
