@@ -25,8 +25,8 @@ type GetProviders = () => Wrapper;
 
 type ReactRenderMethodsQ<Q extends Queries, AllKits extends Array<new () => TestKit>> = {
   withBeforeRender(
-    callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
-  ): this;
+    callback: (result: any) => void,
+  ): any;
   render(
     component: React.ReactElement,
     options?: RenderOptions<Q>,

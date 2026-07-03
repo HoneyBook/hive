@@ -33,8 +33,8 @@ export type ReactBaseKits = typeof REACT_BASE_KITS;
  */
 export type ReactRenderMethods<BaseKits extends TestKitClasses> = {
   withBeforeRender(
-    callback: (result: CombinedTestKitsResult<InstanceType<BaseKits[number]>[]>) => void,
-  ): this;
+    callback: (result: any) => void,
+  ): any;
   render(
     component: React.ReactElement,
     options?: RenderOptions,

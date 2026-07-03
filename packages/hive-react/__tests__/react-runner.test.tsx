@@ -143,7 +143,7 @@ describe("createReactTestRunner", () => {
     const order: string[] = [];
     runner.withUserId("br-comp");
     runner.withBeforeRender(() => order.push("before"));
-    runner.renderComponent((result) => {
+    runner.renderComponent((result: any) => {
       order.push(`component:${result.userId}`);
       return <div data-testid="brc">y</div>;
     });
