@@ -72,8 +72,8 @@ function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): W
  * createReactTestRunner — React platform runner factory.
  *
  * Always prepends ReactTestKit (via REACT_BASE_KITS) to the kit list.
- * ReactTestKit.result (RenderResult) is seeded by render/renderComponent/renderHook,
- * so runner.result includes both kit results AND RTL query functions.
+ * ReactTestKit.result.ui (RenderResult) is seeded by render/renderComponent/renderHook,
+ * so runner.result includes both kit results and the RTL render result under `.ui`.
  *
  * render(), renderHook(), renderComponent() call this.run() without awaiting
  * (fire-and-forget — React handles async state natively; tests use waitFor/findBy).
