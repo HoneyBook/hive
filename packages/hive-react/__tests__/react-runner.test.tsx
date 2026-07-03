@@ -143,13 +143,32 @@ describe("createReactTestRunner", () => {
     const order: string[] = [];
     runner.withUserId("br-comp");
     runner.withBeforeRender((result) => order.push(`before:${result.userId}`));
-    runner.renderComponent(() => {
-      // renderComponent's function-form param is BaseKits-only (pre-existing, unrelated to
-      // withBeforeRender) — this test only checks ordering, not the param's contents.
-      order.push("component");
+    runner.renderComponent((result) => {
+      order.push(`component:${result.userId}`);
       return <div data-testid="brc">y</div>;
     });
-    expect(order).toEqual(["before:br-comp", "component"]);
+    expect(order).toEqual(["before:br-comp", "component:br-comp"]);
+  });
+
+  it("render()'s return type reflects the full merged kit list, not just base kits — regression for the BaseKits-only widening gap", () => {
+    const runner = createReactTestRunner([UserKit]);
+    runner.withUserId("widen-render");
+    const result = runner.render(<div data-testid="widen-render">x</div>);
+    // Prior to the fix, `result` was typed CombinedTestKitsResult<InstanceType<ReactBaseKits[number]>[]>
+    // (ReactTestKit only) — `result.userId` would not type-check even though it exists at runtime.
+    const userId: string = result.userId;
+    expect(userId).toBe("widen-render");
+  });
+
+  it("renderComponent()'s function-form param reflects the full merged kit list — regression for the BaseKits-only widening gap", () => {
+    const runner = createReactTestRunner([UserKit]);
+    runner.withUserId("widen-comp");
+    let capturedUserId = "";
+    runner.renderComponent((result) => {
+      capturedUserId = result.userId;
+      return <div data-testid="widen-comp">y</div>;
+    });
+    expect(capturedUserId).toBe("widen-comp");
   });
 
   it("withBeforeRender: fires before renderHook()", () => {

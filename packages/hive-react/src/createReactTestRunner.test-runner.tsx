@@ -1,8 +1,8 @@
 import React from "react";
 import { TestKit } from "@honeybook/hive";
-import { createBaseTestRunner } from "@honeybook/hive-runner";
-import type { RunnerFactory, NoExecuteFn, TestKitClasses } from "@honeybook/hive-runner";
 import type { CombinedTestKitsResult } from "@honeybook/hive";
+import { createBaseTestRunner } from "@honeybook/hive-runner";
+import type { AppRunnerWithExtraMethods, TestKitClasses } from "@honeybook/hive-runner";
 import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
 import type {
   RenderOptions,
@@ -26,33 +26,24 @@ export const REACT_BASE_KITS = [ReactTestKit] as const;
 export type ReactBaseKits = typeof REACT_BASE_KITS;
 
 /**
- * Extracts the actual, fully-merged `result` type off the polymorphic `this` at each call
- * site (base kits + whatever extra kits the caller passed to createReactTestRunner) — self-
- * inferring, not pinned to BaseKits alone. Only used by withBeforeRender: unlike render/
- * renderComponent/renderHook, its body needs no internal `this.testKits`/`this.run()` access,
- * so it isn't constrained by the object-literal+ThisType<> requirement those methods have
- * (see createTemporalTestRunner.test-runner.ts's comment on that requirement) and can
- * reference the real per-call-site `this` directly.
+ * Render methods provided by createReactTestRunner, parameterized by the caller's full
+ * merged kit list (AllKits = [...REACT_BASE_KITS, ...KitsClasses]) — not just the base
+ * kits — so render/renderComponent/withBeforeRender all reflect every kit's result.
  */
-type SelfResult<Self> = Self extends { result: infer R } ? R : never;
-
-/**
- * Render methods provided by createReactTestRunner.
- * render/renderComponent/renderHook are scoped to BaseKits only (pre-existing, unrelated to
- * withBeforeRender — see discussion for a tracked follow-up to widen them the same way).
- */
-export interface ReactRenderMethods<BaseKits extends TestKitClasses> {
-  withBeforeRender(callback: (result: SelfResult<this>) => void): this;
+export interface ReactRenderMethods<AllKits extends TestKitClasses> {
+  withBeforeRender(
+    callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
+  ): this;
   render(
     component: React.ReactElement,
     options?: RenderOptions,
-  ): CombinedTestKitsResult<InstanceType<BaseKits[number]>[]>;
+  ): CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
   renderComponent(
     component:
       | React.ReactElement
-      | ((result: CombinedTestKitsResult<InstanceType<BaseKits[number]>[]>) => React.ReactElement),
+      | ((result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => React.ReactElement),
     options?: RenderOptions,
-  ): CombinedTestKitsResult<InstanceType<BaseKits[number]>[]>;
+  ): CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
   renderHook<Result, Props>(
     hook: (props: Props) => Result,
     options?: RenderHookOptions<Props>,
@@ -88,29 +79,51 @@ function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): W
  * (fire-and-forget — React handles async state natively; tests use waitFor/findBy).
  * Provider stack: first kit in array = outermost provider.
  *
+ * A genuine generic function (not a RunnerFactory<...>-typed const) so AllKits — the
+ * caller's full merged kit list — is available inside the body, mirroring
+ * createReactTestRunnerWithQueries. This is what lets render()/renderComponent()'s
+ * return type (and withBeforeRender's callback param) reflect every kit's result,
+ * not just REACT_BASE_KITS.
+ *
  * @param kits - TestKit class array (ReactTestKit is auto-prepended via REACT_BASE_KITS).
  * @param extraMethods - Optional consumer methods. void methods chain; non-void return actual value.
  * @param getProviders - Optional extra provider factory. No arg; accesses runner state via this.
  *   Result wraps children INSIDE the kit provider stack.
  */
-export const createReactTestRunner: RunnerFactory<
-  ReactBaseKits,
-  NoExecuteFn,
-  ReactRenderMethods<ReactBaseKits>,
-  GetProviders
-> = (kits, extraMethods, getProviders) => {
-  const allKits = [ReactTestKit, ...kits];
+export function createReactTestRunner<
+  KitsClasses extends TestKitClasses,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ExtraMethods extends Record<string, (...args: any[]) => unknown> = Record<never, never>,
+>(
+  kits: KitsClasses,
+  extraMethods?: ExtraMethods &
+    ThisType<
+      AppRunnerWithExtraMethods<[...ReactBaseKits, ...KitsClasses], ExtraMethods> &
+        ReactRenderMethods<[...ReactBaseKits, ...KitsClasses]>
+    >,
+  getProviders?: GetProviders &
+    ThisType<
+      AppRunnerWithExtraMethods<[...ReactBaseKits, ...KitsClasses], ExtraMethods> &
+        ReactRenderMethods<[...ReactBaseKits, ...KitsClasses]>
+    >,
+): AppRunnerWithExtraMethods<[...ReactBaseKits, ...KitsClasses], ExtraMethods> &
+  ReactRenderMethods<[...ReactBaseKits, ...KitsClasses]> {
+  type AllKits = [...ReactBaseKits, ...KitsClasses];
+
+  const allKits = [ReactTestKit, ...kits] as unknown as [...AllKits];
   const beforeRenderCallbacks: Array<
-    (result: CombinedTestKitsResult<InstanceType<ReactBaseKits[number]>[]>) => void
+    (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void
   > = [];
 
-  const builtIn: Omit<ReactRenderMethods<ReactBaseKits>, "withBeforeRender"> &
-    ThisType<{
-      run(): Promise<void> | void;
-      testKits: TestKit[];
-      testKitsMap: { ReactTestKit: ReactTestKit } & Record<string, TestKit>;
-      result: CombinedTestKitsResult<InstanceType<(typeof REACT_BASE_KITS)[number]>[]>;
-    }> = {
+  const builtIn: Omit<ReactRenderMethods<AllKits>, "withBeforeRender"> &
+    ThisType<
+      AppRunnerWithExtraMethods<AllKits, ExtraMethods> &
+        ReactRenderMethods<AllKits> & {
+          testKits: TestKit[];
+          testKitsMap: { ReactTestKit: ReactTestKit } & Record<string, TestKit>;
+          result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
+        }
+    > = {
     render(component, options?) {
       this.run();
       beforeRenderCallbacks.forEach((cb) => cb(this.result));
@@ -152,11 +165,21 @@ export const createReactTestRunner: RunnerFactory<
   // upgrades a void return to `this` at runtime, matching kit with* chaining. A `this`-typed
   // return here conflicts with the ThisType<> override on `builtIn` (TS2719).
   function withBeforeRender(
-    callback: (result: CombinedTestKitsResult<InstanceType<ReactBaseKits[number]>[]>) => void,
+    callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
   ): void {
     beforeRenderCallbacks.push(callback);
   }
 
-  const merged = { ...builtIn, withBeforeRender, ...(extraMethods ?? {}) };
-  return createBaseTestRunner(allKits, merged as any) as any;
-};
+  const merged = {
+    ...builtIn,
+    withBeforeRender,
+    ...(extraMethods ?? {}),
+  } as (ExtraMethods & ReactRenderMethods<AllKits>) &
+    ThisType<AppRunnerWithExtraMethods<AllKits, ExtraMethods> & ReactRenderMethods<AllKits>>;
+
+  return createBaseTestRunner(allKits, merged) as unknown as AppRunnerWithExtraMethods<
+    AllKits,
+    ExtraMethods
+  > &
+    ReactRenderMethods<AllKits>;
+}
