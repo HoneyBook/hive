@@ -2,7 +2,11 @@ import React from "react";
 import { TestKit } from "@honeybook/hive";
 import type { CombinedTestKitsResult } from "@honeybook/hive";
 import { createBaseTestRunner } from "@honeybook/hive-runner";
-import type { AppRunnerWithExtraMethods, TestKitClasses } from "@honeybook/hive-runner";
+import type {
+  AppRunnerWithExtraMethods,
+  ExtraMethodsShape,
+  TestKitClasses,
+} from "@honeybook/hive-runner";
 import {
   render as rtlRender,
   renderHook as rtlRenderHook,
@@ -26,28 +30,50 @@ type GetProviders = () => Wrapper;
 // A constructor type for ReactTestKitWithQueries instantiated with the caller's actual Q —
 // the bare `typeof ReactTestKitWithQueries` class reference always resolves to the class's
 // *default* type parameter at the type level, silently dropping any custom Q the caller
-// passed to createReactTestRunnerWithQueries.
+// passed (see discussions/13). AllKits[0] carrying Q is what threads it into the result type.
 type ReactTestKitWithQueriesOf<Q extends Queries> = new () => ReactTestKitWithQueries<Q>;
 
-interface ReactRenderMethodsQ<Q extends Queries, AllKits extends Array<new () => TestKit>> {
-  withBeforeRender(
-    callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
-  ): this;
-  render(
-    component?: React.ReactElement,
-    options?: RenderOptions<Q>,
-  ): CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
+/**
+ * Render methods for the custom-queries variant. Like ReactRenderMethods, they are
+ * result-shape-independent (render/renderComponent return `this['result']`, so the merged
+ * result of every kit flows through with no AllKits generic). The ONE thing they still
+ * parameterize on is Q — the custom RTL query set — because `options?: RenderOptions<Q>`
+ * and renderHook's options genuinely depend on it. `extends { result: unknown }` makes
+ * `this['result']` valid at the declaration; it narrows at the intersection use-site.
+ */
+export interface ReactRenderMethodsQ<Q extends Queries> {
+  result: unknown;
+  withBeforeRender(callback: (result: this["result"]) => void): this;
+  render(component?: React.ReactElement, options?: RenderOptions<Q>): this["result"];
   renderComponent(
-    component?:
-      | React.ReactElement
-      | ((result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => React.ReactElement),
+    component?: React.ReactElement | ((result: this["result"]) => React.ReactElement),
     options?: RenderOptions<Q>,
-  ): CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
+  ): this["result"];
   renderHook<Result, Props>(
     hook: (props: Props) => Result,
     options?: RenderHookOptions<Props, Q>,
   ): RenderHookResult<Result, Props>;
 }
+
+// Full public runner type for one call. Uses a plain tuple `[ReactTestKitWithQueriesOf<Q>,
+// ...KitsClasses]` (not MergeTestKits) — Q must be threaded through AllKits[0], which is the
+// discussion-13 Bug-2 fix; wrapper-of-wrapper composition is not a concern for this variant.
+type ReactRunnerWithQueries<
+  KitsClasses extends TestKitClasses,
+  ExtraMethods extends object,
+  Q extends Queries,
+> = AppRunnerWithExtraMethods<[ReactTestKitWithQueriesOf<Q>, ...KitsClasses], ExtraMethods> &
+  ReactRenderMethodsQ<Q>;
+
+// The `this` a render-method implementation sees inside the factory body — fixed to the
+// Q-typed base kit (Q IS in scope here because this is a genuine generic function, which is
+// exactly why this variant can't be a fixed RunnerFactory instantiation).
+type ReactRunnerThisWithQueries<Q extends Queries> = ReactRenderMethodsQ<Q> & {
+  run(): Promise<CombinedTestKitsResult<[ReactTestKitWithQueries<Q>]>>;
+  testKits: TestKit[];
+  testKitsMap: { ReactTestKitWithQueries: ReactTestKitWithQueries<Q> } & Record<string, TestKit>;
+  result: CombinedTestKitsResult<[ReactTestKitWithQueries<Q>]>;
+};
 
 function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): Wrapper {
   const kitStack = generateProviderStack(testKits);
@@ -71,71 +97,59 @@ function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): W
  * Auto-prepends ReactTestKitWithQueries<Q> to the kit list.
  * Use when you need custom query methods beyond the default set.
  *
- * @param kits - TestKit class array (ReactTestKitWithQueries is auto-prepended).
- * @param extraMethods - Optional consumer methods (void = chainable, non-void = returns value).
- * @param getProviders - Optional extra provider factory (no arg; accesses runner via this).
- * @param customQueries - Custom RTL query object. When provided, render/renderHook return results
- *   typed to Q instead of the default query set.
+ * A genuine generic function (over KitsClasses, ExtraMethods, Q) rather than a fixed
+ * RunnerFactory instantiation, because Q determines the base kit's identity
+ * (ReactTestKitWithQueries<Q>) and the render options type (RenderOptions<Q>) — neither of
+ * which a fixed RunnerFactory `BaseKits` can carry. It reuses the same `this['result']`
+ * render-method pattern and inherits the same two-overload ban on extraMethods (skip it with
+ * `{}`, never `undefined`), authored explicitly here since RunnerFactory can't supply it.
  *
- * component is optional on render()/renderComponent() — omit it when the content
- * under test is mounted by a kit's own Provider() instead of passed explicitly;
- * the provider stack is then rendered alone via an empty fragment.
+ * @param kits - TestKit class array (ReactTestKitWithQueries is auto-prepended).
+ * @param extraMethods - Consumer methods (void = chainable, non-void = returns value).
+ *   Required whenever getProviders/customQueries follow — pass `{}` to skip it.
+ * @param getProviders - Optional extra provider factory (no arg; accesses runner via this).
+ * @param customQueries - Custom RTL query object. When provided, render/renderHook return
+ *   results typed to Q instead of the default query set.
+ *
+ * component is optional on render()/renderComponent() — omit it when the content under test
+ * is mounted by a kit's own Provider() instead of passed explicitly.
  */
+export function createReactTestRunnerWithQueries<KitsClasses extends TestKitClasses>(
+  kits: KitsClasses,
+): ReactRunnerWithQueries<KitsClasses, Record<never, never>, typeof defaultQueries>;
 export function createReactTestRunnerWithQueries<
   KitsClasses extends TestKitClasses,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ExtraMethods extends Record<string, (...args: any[]) => unknown> = Record<never, never>,
+  ExtraMethods extends object,
   Q extends Queries = typeof defaultQueries,
 >(
   kits: KitsClasses,
-  extraMethods?: ExtraMethods &
-    ThisType<
-      AppRunnerWithExtraMethods<[ReactTestKitWithQueriesOf<Q>, ...KitsClasses], ExtraMethods> &
-        ReactRenderMethodsQ<Q, [ReactTestKitWithQueriesOf<Q>, ...KitsClasses]>
-    >,
-  getProviders?: GetProviders &
-    ThisType<
-      AppRunnerWithExtraMethods<[ReactTestKitWithQueriesOf<Q>, ...KitsClasses], ExtraMethods> &
-        ReactRenderMethodsQ<Q, [ReactTestKitWithQueriesOf<Q>, ...KitsClasses]>
-    >,
+  extraMethods: ExtraMethods & ThisType<ReactRunnerWithQueries<KitsClasses, ExtraMethods, Q>>,
+  getProviders?: GetProviders & ThisType<ReactRunnerWithQueries<KitsClasses, ExtraMethods, Q>>,
   customQueries?: Q,
-): AppRunnerWithExtraMethods<[ReactTestKitWithQueriesOf<Q>, ...KitsClasses], ExtraMethods> &
-  ReactRenderMethodsQ<Q, [ReactTestKitWithQueriesOf<Q>, ...KitsClasses]> {
-  type AllKits = [ReactTestKitWithQueriesOf<Q>, ...KitsClasses];
-
-  // ReactTestKitWithQueries is generic but we instantiate it as a bare class constructor
-  // here — same class at runtime regardless of Q. AllKits[0] (ReactTestKitWithQueriesOf<Q>)
-  // is what carries Q at the type level; the cast below only bridges the runtime bare-class
-  // reference to that type, it isn't what makes Q flow through.
-  const allKits = [ReactTestKitWithQueries, ...kits] as unknown as [...AllKits];
-  const beforeRenderCallbacks: Array<
-    (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void
-  > = [];
-
+): ReactRunnerWithQueries<KitsClasses, ExtraMethods, Q>;
+export function createReactTestRunnerWithQueries<
+  KitsClasses extends TestKitClasses,
+  ExtraMethods extends object = Record<never, never>,
+  Q extends Queries = typeof defaultQueries,
+>(
+  kits: KitsClasses,
+  extraMethods?: ExtraMethods & ThisType<ReactRunnerWithQueries<KitsClasses, ExtraMethods, Q>>,
+  getProviders?: GetProviders & ThisType<ReactRunnerWithQueries<KitsClasses, ExtraMethods, Q>>,
+  customQueries?: Q,
+): ReactRunnerWithQueries<KitsClasses, ExtraMethods, Q> {
+  const allKits = [ReactTestKitWithQueries, ...kits];
+  const beforeRenderCallbacks: Array<(result: ReactRunnerThisWithQueries<Q>["result"]) => void> =
+    [];
   const renderOptions = customQueries ? { queries: customQueries } : {};
 
-  const builtIn: Omit<ReactRenderMethodsQ<Q, AllKits>, "withBeforeRender"> &
-    ThisType<
-      AppRunnerWithExtraMethods<AllKits, ExtraMethods> &
-        ReactRenderMethodsQ<Q, AllKits> & {
-          testKits: TestKit[];
-          testKitsMap: { ReactTestKitWithQueries: ReactTestKitWithQueries<Q> } & Record<
-            string,
-            TestKit
-          >;
-          result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
-        }
-    > = {
+  const builtIn: Omit<ReactRenderMethodsQ<Q>, "withBeforeRender" | "result"> &
+    ThisType<ReactRunnerThisWithQueries<Q>> = {
     render(component, options?) {
       this.run();
       beforeRenderCallbacks.forEach((cb) => cb(this.result));
-      const Wrapper = getProviderStack(
-        this.testKits,
-        getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
-      );
+      const Wrapper = getProviderStack(this.testKits, (getProviders as GetProviders)?.bind(this));
       // No component means the content under test lives inside a kit's Provider() —
-      // render the provider stack alone via an empty fragment, matching the
-      // long-standing zero-arg convention this factory replaces.
+      // render the provider stack alone via an empty fragment (old zero-arg convention).
       const rtlResult = rtlRender(component ?? <></>, {
         wrapper: Wrapper,
         ...renderOptions,
@@ -147,10 +161,7 @@ export function createReactTestRunnerWithQueries<
     renderComponent(component, options?) {
       this.run();
       beforeRenderCallbacks.forEach((cb) => cb(this.result));
-      const Wrapper = getProviderStack(
-        this.testKits,
-        getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
-      );
+      const Wrapper = getProviderStack(this.testKits, (getProviders as GetProviders)?.bind(this));
       const element =
         typeof component === "function" ? component(this.result) : (component ?? <></>);
       const rtlResult = rtlRender(element, {
@@ -164,33 +175,20 @@ export function createReactTestRunnerWithQueries<
     renderHook(hook, options?) {
       this.run();
       beforeRenderCallbacks.forEach((cb) => cb(this.result));
-      const Wrapper = getProviderStack(
-        this.testKits,
-        getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
-      );
+      const Wrapper = getProviderStack(this.testKits, (getProviders as GetProviders)?.bind(this));
       return rtlRenderHook(hook, { wrapper: Wrapper, ...renderOptions, ...options });
     },
   };
 
   // Declared to return void (not `this`) — createBaseTestRunner's extraMethods wrapper
-  // upgrades a void return to `this` at runtime, matching kit with* chaining. A `this`-typed
-  // return here conflicts with the ThisType<> override on `builtIn` (TS2719).
+  // upgrades a void return to `this` at runtime, matching kit with* chaining.
   function withBeforeRender(
-    callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
+    callback: (result: ReactRunnerThisWithQueries<Q>["result"]) => void,
   ): void {
     beforeRenderCallbacks.push(callback);
   }
 
-  const merged = {
-    ...builtIn,
-    withBeforeRender,
-    ...(extraMethods ?? {}),
-  } as (ExtraMethods & ReactRenderMethodsQ<Q, AllKits>) &
-    ThisType<AppRunnerWithExtraMethods<AllKits, ExtraMethods> & ReactRenderMethodsQ<Q, AllKits>>;
+  const merged = { ...builtIn, withBeforeRender, ...(extraMethods ?? {}) } as ExtraMethodsShape;
 
-  return createBaseTestRunner(allKits, merged) as unknown as AppRunnerWithExtraMethods<
-    AllKits,
-    ExtraMethods
-  > &
-    ReactRenderMethodsQ<Q, AllKits>;
+  return createBaseTestRunner(allKits, merged) as never;
 }

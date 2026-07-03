@@ -47,11 +47,16 @@ describe("createTemporalTestRunner", () => {
   // Test 5: onReset fires before each test
   describe("onReset callback", () => {
     let resetCount = 0;
-    const resetRunner = createTemporalTestRunner([], undefined, {
-      onReset: () => {
-        resetCount++;
+    // extraMethods is {} (not undefined) — the ban requires skipping it with {} to reach config.
+    const resetRunner = createTemporalTestRunner(
+      [],
+      {},
+      {
+        onReset: () => {
+          resetCount++;
+        },
       },
-    });
+    );
 
     it("onReset has fired at least once before this test", async () => {
       await resetRunner.run();
@@ -67,11 +72,15 @@ describe("createTemporalTestRunner", () => {
   // Test 6: injectClients is invoked with the handle
   it("calls injectClients with the handle after workers start", async () => {
     const seen: TemporalHandle[] = [];
-    const runner = createTemporalTestRunner([], undefined, {
-      injectClients: (h) => {
-        seen.push(h);
+    const runner = createTemporalTestRunner(
+      [],
+      {},
+      {
+        injectClients: (h) => {
+          seen.push(h);
+        },
       },
-    });
+    );
     await runner.run();
     expect(seen[0].testEnv).toBe(runner.testEnv);
   });
@@ -85,5 +94,25 @@ describe("createTemporalTestRunner", () => {
     });
     runner.withCustomLabel().withTaskQueuePrefix("chained");
     expect(runner.result).toBeDefined();
+  });
+});
+
+// ─── Type contract (compile-time; anchors the RunnerFactory ban + anti-any surface) ─────────
+// Construction only — no run(), no config with onReset — so no workers/env are started here.
+describe("createTemporalTestRunner — type contract", () => {
+  it("bans explicit undefined for extraMethods and does not degrade to any", () => {
+    // @ts-expect-error — undefined for extraMethods matches neither overload; use {} to reach config.
+    // Config is {} (no onReset) so construction registers no beforeEach — this line still executes
+    // at runtime (the directive only suppresses the type error), and a hook here would be illegal.
+    createTemporalTestRunner([], undefined, {});
+
+    const runner = createTemporalTestRunner([], {});
+    // @ts-expect-error — {} must NOT widen the runner to admit arbitrary methods.
+    const bogusMethod = runner.withNopeDoesNotExist;
+    // @ts-expect-error — result must not be `any`; this property does not exist.
+    const bogusResult = runner.result.nopeDoesNotExist;
+    expect(bogusMethod).toBeUndefined();
+    expect(bogusResult).toBeUndefined();
+    expect(runner).toBeDefined();
   });
 });

@@ -119,7 +119,7 @@ describe("createReactTestRunner", () => {
   it("getProviders wraps INSIDE the kit provider stack", () => {
     const runner = createReactTestRunner(
       [OuterKit],
-      undefined,
+      {},
       () =>
         ({ children }: { children?: React.ReactNode }) => <div data-testid="extra">{children}</div>,
     );
@@ -221,6 +221,45 @@ describe("createReactTestRunner", () => {
     runner.renderComponent();
     expect(screen.getByTestId("content-under-test")).toBeTruthy();
   });
+
+  it("passing undefined for extraMethods is a compile error — the ban (skip it with {}, never undefined)", () => {
+    const getProviders =
+      () =>
+      ({ children }: { children?: React.ReactNode }) =>
+        <>{children}</>;
+    // @ts-expect-error — undefined matches neither overload. TypeScript does not apply
+    // ExtraMethods's default for an explicit undefined (only for an omitted arg) and would
+    // otherwise resolve it to the index-signature constraint, silently readmitting any method
+    // name on the runner. The ban makes it a hard error; pass {} to skip extraMethods.
+    createReactTestRunner([UserKit], undefined, getProviders);
+    // The supported form compiles and does not widen:
+    const runner = createReactTestRunner([UserKit], {}, getProviders);
+    // @ts-expect-error — {} must NOT widen the runner to admit arbitrary methods.
+    const bogus = runner.withThisMethodDoesNotExist;
+    expect(bogus).toBeUndefined();
+  });
+
+  it("does not accidentally degrade to any anywhere on the runner surface — bogus property/method access must fail to compile", () => {
+    const runner = createReactTestRunner([UserKit]);
+    runner.withUserId("no-any-check");
+    const result = runner.render(<div data-testid="no-any-check">x</div>);
+
+    // If `runner` had degraded to `any`, this bogus with* method would compile,
+    // and the directive below would then fail as an "unused directive", failing tsc.
+    // @ts-expect-error — runner must not be `any`; this with* method does not exist
+    const bogusWith = runner.withThisMethodDoesNotExist;
+    expect(bogusWith).toBeUndefined();
+
+    // Same check on render()'s return value (runner.result).
+    // @ts-expect-error — result must not be `any`; this property does not exist
+    const bogusResult = result.thisPropertyDoesNotExist;
+    expect(bogusResult).toBeUndefined();
+
+    // Same check on the nested RTL result (result.ui) — the .ui-nesting fix's own surface.
+    // @ts-expect-error — result.ui must not be `any`; this RTL query does not exist
+    const bogusQuery = result.ui.thisQueryDoesNotExist;
+    expect(bogusQuery).toBeUndefined();
+  });
 });
 
 describe("createReactTestRunnerWithQueries", () => {
@@ -235,10 +274,28 @@ describe("createReactTestRunnerWithQueries", () => {
     );
     const customQueries = { queryAllByDataCustom, getByDataCustom };
 
-    const runner = createReactTestRunnerWithQueries([UserKit], undefined, undefined, customQueries);
+    // extraMethods is {} (not undefined) — the ban requires skipping it with {} to reach
+    // the later positional args; getProviders stays undefined (a genuine optional, no footgun).
+    const runner = createReactTestRunnerWithQueries([UserKit], {}, undefined, customQueries);
     runner.render(<div data-custom="foo">bar</div>);
     const el = runner.result.ui.getByDataCustom("foo") as HTMLElement;
     expect(el.textContent).toBe("bar");
+  });
+
+  it("passing undefined for extraMethods is a compile error in the queries variant too — the exact shape T-11b uses", () => {
+    const queryAllByDataCustom = (container: HTMLElement, value: string) =>
+      Array.from(container.querySelectorAll<HTMLElement>(`[data-custom="${value}"]`));
+    const [, , getByDataCustom] = buildQueries(
+      queryAllByDataCustom,
+      (_c, v) => `dup ${v}`,
+      (_c, v) => `missing ${v}`,
+    );
+    const customQueries = { queryAllByDataCustom, getByDataCustom };
+    // @ts-expect-error — undefined for extraMethods matches neither overload; pass {} to skip it.
+    createReactTestRunnerWithQueries([UserKit], undefined, undefined, customQueries);
+    // The supported form (extraMethods = {}) compiles:
+    const runner = createReactTestRunnerWithQueries([UserKit], {}, undefined, customQueries);
+    expect(runner).toBeDefined();
   });
 
   it("withBeforeRender: callbacks fire before render() in the queries variant", () => {
@@ -265,7 +322,9 @@ describe("createReactTestRunnerWithQueries", () => {
       (_c, v) => `missing ${v}`,
     );
     const customQueries = { queryAllByDataCustom, getByDataCustom };
-    const runner = createReactTestRunnerWithQueries([UserKit], undefined, undefined, customQueries);
+    // extraMethods is {} (not undefined) — the ban requires skipping it with {} to reach
+    // the later positional args; getProviders stays undefined (a genuine optional, no footgun).
+    const runner = createReactTestRunnerWithQueries([UserKit], {}, undefined, customQueries);
     runner.render(<div data-custom="foo">bar</div>);
 
     // Type-level assertion, not just a runtime call: a concretely-typed consumer
@@ -277,5 +336,42 @@ describe("createReactTestRunnerWithQueries", () => {
     }
     const el = consume(runner.result.ui).getByDataCustom("foo");
     expect(el.textContent).toBe("bar");
+  });
+
+  it("does not accidentally degrade to any anywhere on the queries-variant runner surface — bogus property/method access must fail to compile", () => {
+    const queryAllByDataCustom = (container: HTMLElement, value: string) =>
+      Array.from(container.querySelectorAll<HTMLElement>(`[data-custom="${value}"]`));
+    const [, , getByDataCustom] = buildQueries(
+      queryAllByDataCustom,
+      (_c, v) => `dup ${v}`,
+      (_c, v) => `missing ${v}`,
+    );
+    const customQueries = { queryAllByDataCustom, getByDataCustom };
+    // extraMethods is {} (not undefined) — the ban requires skipping it with {} to reach
+    // the later positional args; getProviders stays undefined (a genuine optional, no footgun).
+    const runner = createReactTestRunnerWithQueries([UserKit], {}, undefined, customQueries);
+    runner.withUserId("no-any-check-q");
+    const result = runner.render(<div data-custom="foo">bar</div>);
+
+    // @ts-expect-error — runner must not be `any`; this with* method does not exist
+    const bogusWith = runner.withThisMethodDoesNotExist;
+    expect(bogusWith).toBeUndefined();
+
+    // @ts-expect-error — result must not be `any`; this property does not exist
+    const bogusResult = result.thisPropertyDoesNotExist;
+    expect(bogusResult).toBeUndefined();
+
+    // The Q-threading fix's own surface — result.ui must stay narrowed to the
+    // caller's actual custom query set, not widen to `any` or the default Queries.
+    // @ts-expect-error — result.ui must not be `any`; this query does not exist
+    const bogusQuery = result.ui.thisQueryDoesNotExist;
+    expect(bogusQuery).toBeUndefined();
+
+    // @ts-expect-error — result.ui must not be `any`; even a REAL default-query
+    // method (getByRole) must not resolve, since Q here is the narrow custom set,
+    // not the default RTL query set — this specifically guards against Bug 2's
+    // regression mode (Q silently widening back to `typeof defaultQueries`).
+    const bogusDefaultQuery = result.ui.getByRole;
+    expect(bogusDefaultQuery).toBeUndefined();
   });
 });

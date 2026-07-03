@@ -1,7 +1,12 @@
 import { TestKit } from "@honeybook/hive";
 import type { CombinedTestKitsResult } from "@honeybook/hive";
 import { createBaseTestRunner } from "@honeybook/hive-runner";
-import type { RunnerFactory, NoMethods } from "@honeybook/hive-runner";
+import type {
+  ExtraMethodsShape,
+  NoMethods,
+  RunnerFactory,
+  TestKitClasses,
+} from "@honeybook/hive-runner";
 import { Worker } from "@temporalio/worker";
 import { MockActivityEnvironment } from "@temporalio/testing";
 import type { TestWorkflowEnvironment } from "@temporalio/testing";
@@ -41,12 +46,14 @@ type ExecuteThis = {
   result: CombinedTestKitsResult<InstanceType<TemporalBaseKits[number]>[]>;
 };
 
+// Loose, explicit param types (see createExpressTestRunner for the why): both trailing params
+// are optional so the arrow satisfies the kits-only overload; the body casts through.
 export const createTemporalTestRunner: RunnerFactory<
   TemporalBaseKits,
   TemporalHandle,
   NoMethods,
   TemporalRunnerConfig
-> = (kits, extraMethods, config) => {
+> = (kits: TestKitClasses, extraMethods?: ExtraMethodsShape, config?: TemporalRunnerConfig) => {
   const allKits = [TemporalTestKit, TemporalConfigTestKit, ...kits];
 
   // onReset auto-registered at construction time via jest beforeEach global.
