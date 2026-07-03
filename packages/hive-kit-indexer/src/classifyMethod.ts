@@ -1,5 +1,5 @@
 import type { MethodDeclaration } from "ts-morph";
-import type { MethodKind } from "./types";
+import type { MethodKind } from "./types.js";
 
 // Only errorInjector is inferable from a name pattern; `exposure` has no
 // naming convention and is reachable only via an explicit @kind tag.

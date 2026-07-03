@@ -11,5 +11,10 @@ module.exports = {
   ],
   moduleNameMapper: {
     "^@honeybook/hive$": "<rootDir>/../hive/index.ts",
+    // Source imports write explicit .js extensions (required for the
+    // compiled ESM output to resolve under Node's own module loader) —
+    // strip them back off so Jest resolves the relative specifier to its
+    // .ts source file instead of a literal (nonexistent) .js file.
+    "^(\\.{1,2}/.*)\\.js$": "$1",
   },
 };

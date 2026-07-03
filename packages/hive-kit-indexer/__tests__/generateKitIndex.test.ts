@@ -163,6 +163,20 @@ describe("generateKitIndex discover mode", () => {
     const runner = index.runners.find((r: RunnerEntry) => r.factoryName === "createXpkgTestRunner");
     expect(runner?.forcedBaseKits).toEqual(["WrappedKitX", "WrappedKitY", "LocalKit"]);
   });
+
+  it("resolves cross-package composition through an aliased wrapped-factory import", () => {
+    const runner = index.runners.find(
+      (r: RunnerEntry) => r.factoryName === "createAliasedXpkgTestRunner",
+    );
+    expect(runner?.forcedBaseKits).toEqual(["WrappedKitX", "WrappedKitY", "LocalKit"]);
+  });
+
+  it("sees kits routed through mergeTestKits, not just inline array literals", () => {
+    const runner = index.runners.find(
+      (r: RunnerEntry) => r.factoryName === "createMergeHelperTestRunner",
+    );
+    expect(runner?.forcedBaseKits).toEqual(["CoreKitA", "CoreKitB", "CxKit"]);
+  });
 });
 
 it("throws on zero glob match", () => {

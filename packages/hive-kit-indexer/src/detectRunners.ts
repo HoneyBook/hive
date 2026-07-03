@@ -1,11 +1,11 @@
 import { Node, type CompilerOptions, type ExportedDeclarations, type SourceFile } from "ts-morph";
-import { resolveSourceFilePath } from "./resolveSourceFilePath";
+import { resolveSourceFilePath } from "./resolveSourceFilePath.js";
 import {
   BASE_RUNNER_FACTORY_NAMES,
   getAllFactoryCandidates,
   resolveForcedBaseKits,
-} from "./resolveComposition";
-import type { RunnerEntry, SourceFilePathMode } from "./types";
+} from "./resolveComposition.js";
+import type { RunnerEntry, SourceFilePathMode } from "./types.js";
 
 /** Peels an optional `as const` wrapper to reach the array literal, if any. */
 function getArrayElementNames(initializer: Node): string[] {

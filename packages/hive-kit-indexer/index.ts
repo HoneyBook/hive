@@ -1,4 +1,5 @@
-export { generateKitIndex } from "./src/generateKitIndex";
+export { generateKitIndex } from "./src/generateKitIndex.js";
+export { writeKitIndex } from "./src/writeKitIndex.js";
 export type {
   KitIndex,
   KitEntry,
@@ -8,4 +9,4 @@ export type {
   ResultField,
   KitIndexOptions,
   SourceFilePathMode,
-} from "./src/types";
+} from "./src/types.js";

@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { Project, SourceFile } from "ts-morph";
-import type { DiscoverOptions } from "./types";
+import type { DiscoverOptions } from "./types.js";
 
 /**
  * Resolves `discover.include`/`discover.exclude` as globs against
