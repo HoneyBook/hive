@@ -225,8 +225,7 @@ describe("createReactTestRunner", () => {
   it("passing undefined for extraMethods is a compile error — the ban (skip it with {}, never undefined)", () => {
     const getProviders =
       () =>
-      ({ children }: { children?: React.ReactNode }) =>
-        <>{children}</>;
+      ({ children }: { children?: React.ReactNode }) => <>{children}</>;
     // @ts-expect-error — undefined matches neither overload. TypeScript does not apply
     // ExtraMethods's default for an explicit undefined (only for an omitted arg) and would
     // otherwise resolve it to the index-signature constraint, silently readmitting any method
