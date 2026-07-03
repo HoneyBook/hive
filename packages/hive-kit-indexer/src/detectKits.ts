@@ -1,8 +1,8 @@
 import path from "node:path";
 import { Node, type ClassDeclaration, type CompilerOptions, type SourceFile } from "ts-morph";
-import { classifyMethodKind, getMethodJsDoc } from "./classifyMethod";
-import { resolveSourceFilePath } from "./resolveSourceFilePath";
-import type { KitEntry, MethodEntry, ResultField, SourceFilePathMode } from "./types";
+import { classifyMethodKind, getMethodJsDoc } from "./classifyMethod.js";
+import { resolveSourceFilePath } from "./resolveSourceFilePath.js";
+import type { KitEntry, MethodEntry, ResultField, SourceFilePathMode } from "./types.js";
 
 const KIT_BASE_CLASS_NAMES = new Set(["TestKit", "AsyncTestKit"]);
 

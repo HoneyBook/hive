@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { CompilerOptions } from "ts-morph";
-import type { SourceFilePathMode } from "./types";
+import type { SourceFilePathMode } from "./types.js";
 
 /**
  * ts-morph's getCompilerOptions() normalizes rootDir/outDir to absolute

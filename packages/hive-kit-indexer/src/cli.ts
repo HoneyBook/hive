@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import { generateKitIndex } from "./generateKitIndex";
+import { generateKitIndex } from "./generateKitIndex.js";
 
 // Runs from the target package's root (pnpm sets script cwd to the package
 // root), after that package's own `tsc` build — dist/ already exists.

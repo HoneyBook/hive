@@ -11,8 +11,8 @@ import {
   type NewExpression,
   type SourceFile,
 } from "ts-morph";
-import { isTestKitClass } from "./detectKits";
-import type { KitIndex } from "./types";
+import { isTestKitClass } from "./detectKits.js";
+import type { KitIndex } from "./types.js";
 
 /**
  * Resolves the declarations behind a node's symbol, following an import
