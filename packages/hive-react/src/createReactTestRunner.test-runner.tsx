@@ -32,6 +32,9 @@ export type ReactBaseKits = typeof REACT_BASE_KITS;
  * For a derived factory with more BaseKits, render() returns the richer combined type.
  */
 export type ReactRenderMethods<BaseKits extends TestKitClasses> = {
+  withBeforeRender(
+    callback: (result: CombinedTestKitsResult<InstanceType<BaseKits[number]>[]>) => void,
+  ): this;
   render(
     component: React.ReactElement,
     options?: RenderOptions,
@@ -89,6 +92,9 @@ export const createReactTestRunner: RunnerFactory<
   GetProviders
 > = (kits, extraMethods, getProviders) => {
   const allKits = [ReactTestKit, ...kits];
+  const beforeRenderCallbacks: Array<
+    (result: CombinedTestKitsResult<InstanceType<ReactBaseKits[number]>[]>) => void
+  > = [];
 
   const builtIn: ReactRenderMethods<ReactBaseKits> &
     ThisType<{
@@ -97,8 +103,13 @@ export const createReactTestRunner: RunnerFactory<
       testKitsMap: { ReactTestKit: ReactTestKit } & Record<string, TestKit>;
       result: CombinedTestKitsResult<InstanceType<(typeof REACT_BASE_KITS)[number]>[]>;
     }> = {
+    withBeforeRender(callback) {
+      beforeRenderCallbacks.push(callback);
+      return this;
+    },
     render(component, options?) {
       this.run();
+      beforeRenderCallbacks.forEach((cb) => cb(this.result));
       const Wrapper = getProviderStack(
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
@@ -109,6 +120,7 @@ export const createReactTestRunner: RunnerFactory<
     },
     renderComponent(component, options?) {
       this.run();
+      beforeRenderCallbacks.forEach((cb) => cb(this.result));
       const Wrapper = getProviderStack(
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
@@ -120,6 +132,7 @@ export const createReactTestRunner: RunnerFactory<
     },
     renderHook(hook, options?) {
       this.run();
+      beforeRenderCallbacks.forEach((cb) => cb(this.result));
       const Wrapper = getProviderStack(
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,

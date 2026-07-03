@@ -24,6 +24,9 @@ type Wrapper = NonNullable<RenderOptions["wrapper"]>;
 type GetProviders = () => Wrapper;
 
 type ReactRenderMethodsQ<Q extends Queries, AllKits extends Array<new () => TestKit>> = {
+  withBeforeRender(
+    callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
+  ): this;
   render(
     component: React.ReactElement,
     options?: RenderOptions<Q>,
@@ -93,6 +96,9 @@ export function createReactTestRunnerWithQueries<
   // ReactTestKitWithQueries is generic but we instantiate it as a class constructor here.
   // The type parameter Q flows through RenderResult<Q> via seedRenderResult.
   const allKits = [ReactTestKitWithQueries, ...kits] as unknown as [...AllKits];
+  const beforeRenderCallbacks: Array<
+    (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void
+  > = [];
 
   const renderOptions = customQueries ? { queries: customQueries } : {};
 
@@ -108,8 +114,13 @@ export function createReactTestRunnerWithQueries<
           result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>;
         }
     > = {
+    withBeforeRender(callback) {
+      beforeRenderCallbacks.push(callback);
+      return this;
+    },
     render(component, options?) {
       this.run();
+      beforeRenderCallbacks.forEach((cb) => cb(this.result));
       const Wrapper = getProviderStack(
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
@@ -124,6 +135,7 @@ export function createReactTestRunnerWithQueries<
     },
     renderComponent(component, options?) {
       this.run();
+      beforeRenderCallbacks.forEach((cb) => cb(this.result));
       const Wrapper = getProviderStack(
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
@@ -139,6 +151,7 @@ export function createReactTestRunnerWithQueries<
     },
     renderHook(hook, options?) {
       this.run();
+      beforeRenderCallbacks.forEach((cb) => cb(this.result));
       const Wrapper = getProviderStack(
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,

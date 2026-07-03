@@ -120,6 +120,55 @@ describe("createReactTestRunner", () => {
     // so runner.result includes getByTestId without any cast.
     expect(runner.result.getByTestId("check").textContent).toBe("rendered");
   });
+
+  it("withBeforeRender: is chainable and returns the same runner", () => {
+    const runner = createReactTestRunner([UserKit]);
+    expect(runner.withBeforeRender(() => {})).toBe(runner);
+  });
+
+  it("withBeforeRender: single callback fires before render() with the seeded result", () => {
+    const runner = createReactTestRunner([UserKit]);
+    const seen: string[] = [];
+    runner.withUserId("br-render");
+    runner.withBeforeRender((result) => {
+      seen.push(result.userId);
+    });
+    const result = runner.render(<div data-testid="br">x</div>);
+    expect(seen).toEqual(["br-render"]);
+    expect(result.getByTestId("br")).toBeTruthy();
+  });
+
+  it("withBeforeRender: fires before renderComponent() and before function-form component resolves", () => {
+    const runner = createReactTestRunner([UserKit]);
+    const order: string[] = [];
+    runner.withUserId("br-comp");
+    runner.withBeforeRender(() => order.push("before"));
+    runner.renderComponent((result) => {
+      order.push(`component:${result.userId}`);
+      return <div data-testid="brc">y</div>;
+    });
+    expect(order).toEqual(["before", "component:br-comp"]);
+  });
+
+  it("withBeforeRender: fires before renderHook()", () => {
+    const runner = createReactTestRunner([UserKit]);
+    const seen: string[] = [];
+    runner.withUserId("br-hook");
+    runner.withBeforeRender((result) => seen.push(result.userId));
+    runner.renderHook(() => ({ value: 1 }));
+    expect(seen).toEqual(["br-hook"]);
+  });
+
+  it("withBeforeRender: multiple chained callbacks all fire in registration order (accumulate, no clobber)", () => {
+    const runner = createReactTestRunner([UserKit]);
+    const order: string[] = [];
+    runner
+      .withBeforeRender(() => order.push("first"))
+      .withBeforeRender(() => order.push("second"))
+      .withBeforeRender(() => order.push("third"));
+    runner.render(<div data-testid="acc">z</div>);
+    expect(order).toEqual(["first", "second", "third"]);
+  });
 });
 
 describe("createReactTestRunnerWithQueries", () => {
@@ -138,5 +187,14 @@ describe("createReactTestRunnerWithQueries", () => {
     runner.render(<div data-custom="foo">bar</div>);
     const el = runner.result.getByDataCustom("foo") as HTMLElement;
     expect(el.textContent).toBe("bar");
+  });
+
+  it("withBeforeRender: callbacks fire before render() in the queries variant", () => {
+    const runner = createReactTestRunnerWithQueries([UserKit]);
+    const seen: string[] = [];
+    runner.withUserId("brq");
+    runner.withBeforeRender((result) => seen.push(result.userId));
+    runner.render(<div data-testid="brq">q</div>);
+    expect(seen).toEqual(["brq"]);
   });
 });
