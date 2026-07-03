@@ -1,4 +1,5 @@
 export { generateKitIndex } from "./src/generateKitIndex.js";
+export { writeKitIndex } from "./src/writeKitIndex.js";
 export type {
   KitIndex,
   KitEntry,

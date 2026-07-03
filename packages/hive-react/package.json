@@ -19,7 +19,7 @@
     "registry": "https://npm.cloudsmith.io/honeybook/npmjs/"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -b tsconfig.build.json && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json && hive-kit-indexer",
+    "build": "rimraf dist && tsc -b tsconfig.build.json && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json && node -e \"require('@honeybook/hive-kit-indexer').writeKitIndex()\"",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
