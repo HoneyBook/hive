@@ -131,7 +131,9 @@ describe("createReactTestRunner", () => {
     const seen: string[] = [];
     runner.withUserId("br-render");
     runner.withBeforeRender((result) => {
-      seen.push(result.userId);
+      // withBeforeRender's callback type is scoped to this runner's BaseKits (ReactTestKit),
+      // matching render()'s own return-type scoping — reading an extra kit's field needs a cast.
+      seen.push((result as unknown as { userId: string }).userId);
     });
     const result = runner.render(<div data-testid="br">x</div>);
     expect(seen).toEqual(["br-render"]);
@@ -143,8 +145,9 @@ describe("createReactTestRunner", () => {
     const order: string[] = [];
     runner.withUserId("br-comp");
     runner.withBeforeRender(() => order.push("before"));
-    runner.renderComponent((result: any) => {
-      order.push(`component:${result.userId}`);
+    runner.renderComponent((result) => {
+      // renderComponent's function-form param is BaseKits-scoped too — same cast as above.
+      order.push(`component:${(result as unknown as { userId: string }).userId}`);
       return <div data-testid="brc">y</div>;
     });
     expect(order).toEqual(["before", "component:br-comp"]);
@@ -154,7 +157,7 @@ describe("createReactTestRunner", () => {
     const runner = createReactTestRunner([UserKit]);
     const seen: string[] = [];
     runner.withUserId("br-hook");
-    runner.withBeforeRender((result) => seen.push(result.userId));
+    runner.withBeforeRender((result) => seen.push((result as unknown as { userId: string }).userId));
     runner.renderHook(() => ({ value: 1 }));
     expect(seen).toEqual(["br-hook"]);
   });

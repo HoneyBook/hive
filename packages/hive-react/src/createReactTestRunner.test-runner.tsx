@@ -31,10 +31,10 @@ export type ReactBaseKits = typeof REACT_BASE_KITS;
  * For createReactTestRunner, render() returns CombinedTestKitsResult<[ReactTestKit]> = RenderResult.
  * For a derived factory with more BaseKits, render() returns the richer combined type.
  */
-export type ReactRenderMethods<BaseKits extends TestKitClasses> = {
+export interface ReactRenderMethods<BaseKits extends TestKitClasses> {
   withBeforeRender(
-    callback: (result: any) => void,
-  ): any;
+    callback: (result: CombinedTestKitsResult<InstanceType<BaseKits[number]>[]>) => void,
+  ): this;
   render(
     component: React.ReactElement,
     options?: RenderOptions,
@@ -49,7 +49,7 @@ export type ReactRenderMethods<BaseKits extends TestKitClasses> = {
     hook: (props: Props) => Result,
     options?: RenderHookOptions<Props>,
   ): RenderHookResult<Result, Props>;
-};
+}
 
 function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): Wrapper {
   const kitStack = generateProviderStack(testKits);
@@ -96,17 +96,13 @@ export const createReactTestRunner: RunnerFactory<
     (result: CombinedTestKitsResult<InstanceType<ReactBaseKits[number]>[]>) => void
   > = [];
 
-  const builtIn: ReactRenderMethods<ReactBaseKits> &
+  const builtIn: Omit<ReactRenderMethods<ReactBaseKits>, "withBeforeRender"> &
     ThisType<{
       run(): Promise<void> | void;
       testKits: TestKit[];
       testKitsMap: { ReactTestKit: ReactTestKit } & Record<string, TestKit>;
       result: CombinedTestKitsResult<InstanceType<(typeof REACT_BASE_KITS)[number]>[]>;
     }> = {
-    withBeforeRender(callback) {
-      beforeRenderCallbacks.push(callback);
-      return this;
-    },
     render(component, options?) {
       this.run();
       beforeRenderCallbacks.forEach((cb) => cb(this.result));
@@ -144,6 +140,15 @@ export const createReactTestRunner: RunnerFactory<
     },
   };
 
-  const merged = { ...builtIn, ...(extraMethods ?? {}) };
+  // Declared to return void (not `this`) — createBaseTestRunner's extraMethods wrapper
+  // upgrades a void return to `this` at runtime, matching kit with* chaining. A `this`-typed
+  // return here conflicts with the ThisType<> override on `builtIn` (TS2719).
+  function withBeforeRender(
+    callback: (result: CombinedTestKitsResult<InstanceType<ReactBaseKits[number]>[]>) => void,
+  ): void {
+    beforeRenderCallbacks.push(callback);
+  }
+
+  const merged = { ...builtIn, withBeforeRender, ...(extraMethods ?? {}) };
   return createBaseTestRunner(allKits, merged as any) as any;
 };
