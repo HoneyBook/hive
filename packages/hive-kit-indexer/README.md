@@ -18,9 +18,12 @@ const liveIndex = generateKitIndex("/path/to/atlas-service", {
 });
 
 // A consuming service whose TestKit subclasses are scattered across
-// src/** rather than curated through a barrel index.ts — use `discover`:
+// src/** rather than curated through a barrel index.ts — use `discover`.
+// Prefer scoping the glob to the *.test-kit.ts/*.test-runner.ts naming
+// convention over a broad src/**/*.ts scan — no reason to walk the whole
+// codebase when the convention already marks every file that matters:
 const discoveredIndex = generateKitIndex("/path/to/atlas-service", {
-  discover: { include: ["src/**/*.ts"], exclude: ["src/legacy/**"] },
+  discover: { include: ["src/**/*.test-kit.ts", "src/**/*.test-runner.ts"] },
   sourceFilePathMode: "source",
 });
 ```
@@ -64,7 +67,11 @@ interface KitIndexOptions {
   _how files are found_, `sourceFilePathMode` controls _how a found file's
   path is written into `sourceFile`_ — the common pairing for a
   discover-mode consumer is `discover` + `sourceFilePathMode: "source"`,
-  but nothing forces it.
+  but nothing forces it. Prefer scoping `include` to the
+  `*.test-kit.ts`/`*.test-runner.ts` naming convention over a broad
+  `src/**/*.ts` scan when that convention is already in place — no reason
+  to walk the whole source tree when the filenames already mark every
+  file that matters.
 
 ## CLI
 
