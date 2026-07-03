@@ -14,9 +14,13 @@
     "clean": "turbo run clean",
     "prepare": "husky",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm run build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@eslint/js": "9.31.0",
     "eslint": "9.31.0",
     "eslint-plugin-import": "2.32.0",

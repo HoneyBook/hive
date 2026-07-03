@@ -1,0 +1,20 @@
+{
+  "mode": "pre",
+  "tag": "beta",
+  "initialVersions": {
+    "@honeybook/eslint-plugin-hive": "0.1.0-beta.0",
+    "@honeybook/hive": "1.5.0-beta.3",
+    "@honeybook/hive-express": "0.1.0-beta.7",
+    "@honeybook/hive-kit-indexer": "0.1.0-beta.4",
+    "@honeybook/hive-mock-adapter": "0.1.0-beta.0",
+    "@honeybook/hive-mock-adapter-jest": "0.1.0-beta.1",
+    "@honeybook/hive-mock-adapter-vitest": "0.1.0-beta.1",
+    "@honeybook/hive-react": "0.1.0-beta.5",
+    "@honeybook/hive-runner": "0.1.0-beta.5",
+    "@honeybook/hive-temporal": "0.1.0-beta.6",
+    "@honeybook/hive-temporal-example": "0.0.0",
+    "@honeybook/hive-example-jest": "0.0.0",
+    "@honeybook/hive-example-vitest": "0.0.0"
+  },
+  "changesets": []
+}
