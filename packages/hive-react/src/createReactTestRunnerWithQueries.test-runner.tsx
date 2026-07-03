@@ -23,7 +23,10 @@ type Wrapper = NonNullable<RenderOptions["wrapper"]>;
 // GetProviders: no arg, returns a Wrapper. Bound to runner this via ThisType<> at call site.
 type GetProviders = () => Wrapper;
 
-type ReactRenderMethodsQ<Q extends Queries, AllKits extends Array<new () => TestKit>> = {
+interface ReactRenderMethodsQ<Q extends Queries, AllKits extends Array<new () => TestKit>> {
+  withBeforeRender(
+    callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
+  ): this;
   render(
     component: React.ReactElement,
     options?: RenderOptions<Q>,
@@ -38,7 +41,7 @@ type ReactRenderMethodsQ<Q extends Queries, AllKits extends Array<new () => Test
     hook: (props: Props) => Result,
     options?: RenderHookOptions<Props, Q>,
   ): RenderHookResult<Result, Props>;
-};
+}
 
 function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): Wrapper {
   const kitStack = generateProviderStack(testKits);
@@ -93,10 +96,13 @@ export function createReactTestRunnerWithQueries<
   // ReactTestKitWithQueries is generic but we instantiate it as a class constructor here.
   // The type parameter Q flows through RenderResult<Q> via seedRenderResult.
   const allKits = [ReactTestKitWithQueries, ...kits] as unknown as [...AllKits];
+  const beforeRenderCallbacks: Array<
+    (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void
+  > = [];
 
   const renderOptions = customQueries ? { queries: customQueries } : {};
 
-  const builtIn: ReactRenderMethodsQ<Q, AllKits> &
+  const builtIn: Omit<ReactRenderMethodsQ<Q, AllKits>, "withBeforeRender"> &
     ThisType<
       AppRunnerWithExtraMethods<AllKits, ExtraMethods> &
         ReactRenderMethodsQ<Q, AllKits> & {
@@ -110,6 +116,7 @@ export function createReactTestRunnerWithQueries<
     > = {
     render(component, options?) {
       this.run();
+      beforeRenderCallbacks.forEach((cb) => cb(this.result));
       const Wrapper = getProviderStack(
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
@@ -124,6 +131,7 @@ export function createReactTestRunnerWithQueries<
     },
     renderComponent(component, options?) {
       this.run();
+      beforeRenderCallbacks.forEach((cb) => cb(this.result));
       const Wrapper = getProviderStack(
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
@@ -139,6 +147,7 @@ export function createReactTestRunnerWithQueries<
     },
     renderHook(hook, options?) {
       this.run();
+      beforeRenderCallbacks.forEach((cb) => cb(this.result));
       const Wrapper = getProviderStack(
         this.testKits,
         getProviders ? (getProviders as () => Wrapper).bind(this) : undefined,
@@ -147,8 +156,18 @@ export function createReactTestRunnerWithQueries<
     },
   };
 
+  // Declared to return void (not `this`) — createBaseTestRunner's extraMethods wrapper
+  // upgrades a void return to `this` at runtime, matching kit with* chaining. A `this`-typed
+  // return here conflicts with the ThisType<> override on `builtIn` (TS2719).
+  function withBeforeRender(
+    callback: (result: CombinedTestKitsResult<InstanceType<AllKits[number]>[]>) => void,
+  ): void {
+    beforeRenderCallbacks.push(callback);
+  }
+
   const merged = {
     ...builtIn,
+    withBeforeRender,
     ...(extraMethods ?? {}),
   } as (ExtraMethods & ReactRenderMethodsQ<Q, AllKits>) &
     ThisType<AppRunnerWithExtraMethods<AllKits, ExtraMethods> & ReactRenderMethodsQ<Q, AllKits>>;

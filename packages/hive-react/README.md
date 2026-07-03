@@ -61,6 +61,7 @@ it("renders a hook with typed result", async () => {
 - `REACT_BASE_KITS` — the base kit set injected into every React runner
 - `ReactBaseKits` — type of `REACT_BASE_KITS`
 - `ReactRenderMethods` — type of the `render`/`renderHook` methods added to the runner
+- `withBeforeRender` — chainable runner method registering a callback fired with the seeded `result` just before each `render`/`renderComponent`/`renderHook`; multiple calls accumulate in registration order
 - `createReactTestRunnerWithQueries` — factory variant accepting custom RTL queries
 - `generateProviderStack` — composes kit `Provider()`s into a nested provider tree
 - `IProviderTestKit` — interface a kit implements to contribute a provider
