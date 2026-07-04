@@ -6,9 +6,9 @@ import type {
   RunnerFactory,
   TestKitClasses,
 } from "@honeybook/hive-runner";
-import type { RenderOptions, RenderHookOptions, RenderHookResult } from "@testing-library/react";
+import type { RenderOptions } from "@testing-library/react";
 import { createReactRenderMethods } from "./reactRenderMethods";
-import type { GetProviders } from "./reactRenderMethods";
+import type { GetProviders, RenderHookOptions, RenderHookResult } from "./reactRenderMethods";
 import { ReactTestKit } from "./ReactTestKit.test-kit";
 
 /**

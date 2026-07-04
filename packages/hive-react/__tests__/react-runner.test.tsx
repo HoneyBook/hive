@@ -1,5 +1,5 @@
 import React from "react";
-import { screen, buildQueries } from "@testing-library/react";
+import { act, screen, buildQueries } from "@testing-library/react";
 import { TestKit } from "@honeybook/hive";
 import type { IProviderTestKit } from "../src/IProviderTestKit";
 import { createReactTestRunner } from "../src/createReactTestRunner.test-runner";
@@ -63,6 +63,31 @@ class UserKit extends TestKit {
   defaultCallback = () => this.withUserId("default");
 }
 
+// A kit whose Provider() supplies a real React Context — used to verify renderHook() drives
+// hooks through the SAME provider stack (via rtlRender's `wrapper` option) that render() does,
+// not just a bare, unwrapped render.
+const TestContext = React.createContext("no-provider");
+
+class ContextProviderKit extends TestKit implements IProviderTestKit {
+  result = { contextValue: "from-provider" };
+  get name() {
+    return "ContextProviderKit";
+  }
+  defaultCallback = () => {};
+  Provider() {
+    const { contextValue } = this.result;
+    return ({ children }: { children?: React.ReactNode }) => (
+      <TestContext.Provider value={contextValue}>
+        <div data-testid="context-provider">{children}</div>
+      </TestContext.Provider>
+    );
+  }
+}
+
+function useTestContextValue() {
+  return React.useContext(TestContext);
+}
+
 // ─── Tests ─────────────────────────────────────────────────────────────────
 
 describe("createReactTestRunner", () => {
@@ -80,6 +105,116 @@ describe("createReactTestRunner", () => {
     const { result } = runner.renderHook(() => ({ value: 42 }));
     const value: number = result.current.value;
     expect(value).toBe(42);
+  });
+
+  it("renderHook(): result is a stable reference across renders — only .current changes", () => {
+    const runner = createReactTestRunner([UserKit]);
+    const { result, rerender } = runner.renderHook((n: number) => n * 2, { initialProps: 3 });
+    const stableRef = result;
+    expect(result.current).toBe(6);
+    rerender(5);
+    expect(result).toBe(stableRef);
+    expect(result.current).toBe(10);
+  });
+
+  it("renderHook(): rerender() without new props re-invokes the hook with the last props", () => {
+    const runner = createReactTestRunner([UserKit]);
+    let callCount = 0;
+    const { result, rerender } = runner.renderHook(
+      (n: number) => {
+        callCount += 1;
+        return n;
+      },
+      { initialProps: 7 },
+    );
+    expect(result.current).toBe(7);
+    rerender();
+    expect(callCount).toBe(2);
+    expect(result.current).toBe(7);
+  });
+
+  it("renderHook(): unmount() tears down the rendered hook consumer and flushes cleanup effects", () => {
+    const runner = createReactTestRunner([UserKit]);
+    const cleanup = jest.fn();
+    const { unmount } = runner.renderHook(() => {
+      React.useEffect(() => cleanup, []);
+      return null;
+    });
+    expect(cleanup).not.toHaveBeenCalled();
+    unmount();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it("renderHook(): supports stateful hooks — useState updates are visible via act() + rerender", () => {
+    const runner = createReactTestRunner([UserKit]);
+    function useCounter() {
+      const [count, setCount] = React.useState(0);
+      return { count, increment: () => setCount((c) => c + 1) };
+    }
+    const { result } = runner.renderHook(useCounter);
+    expect(result.current.count).toBe(0);
+    act(() => result.current.increment());
+    expect(result.current.count).toBe(1);
+  });
+
+  it("renderHook(): the hook is rendered inside the runner's provider stack — same wrapper as render()", () => {
+    const runner = createReactTestRunner([ContextProviderKit]);
+    const { result } = runner.renderHook(useTestContextValue);
+    expect(result.current).toBe("from-provider");
+    // Confirms it's the SAME rtlRender(...) + `wrapper` option path render() uses, not a
+    // bare unwrapped render — the provider's own DOM markup is seeded into runner.result.ui too.
+    expect(runner.result.ui.getByTestId("context-provider")).toBeTruthy();
+  });
+
+  it("renderHook(): getProviders wraps INSIDE the kit provider stack, same as render()", () => {
+    const runner = createReactTestRunner(
+      [OuterKit],
+      {},
+      () =>
+        ({ children }: { children?: React.ReactNode }) => <div data-testid="extra">{children}</div>,
+    );
+    runner.renderHook(() => null);
+    const outer = screen.getByTestId("outer");
+    const extra = screen.getByTestId("extra");
+    expect(outer.contains(extra)).toBe(true);
+  });
+
+  it("renderHook(): withBeforeRender fires exactly once (at initial render), not again on rerender()", () => {
+    const runner = createReactTestRunner([UserKit]);
+    let fireCount = 0;
+    runner.withBeforeRender(() => {
+      fireCount += 1;
+    });
+    const { rerender } = runner.renderHook((n: number) => n, { initialProps: 1 });
+    expect(fireCount).toBe(1);
+    rerender(2);
+    rerender(3);
+    expect(fireCount).toBe(1);
+  });
+
+  it("renderHook(): sequential rerenders each reflect the newly passed props, in order", () => {
+    const runner = createReactTestRunner([UserKit]);
+    const seen: number[] = [];
+    const { result, rerender } = runner.renderHook(
+      (n: number) => {
+        seen.push(n);
+        return n;
+      },
+      { initialProps: 1 },
+    );
+    rerender(2);
+    rerender(3);
+    expect(seen).toEqual([1, 2, 3]);
+    expect(result.current).toBe(3);
+  });
+
+  it("renderHook(): a hook that throws during render propagates the error, not swallowed", () => {
+    const runner = createReactTestRunner([UserKit]);
+    expect(() =>
+      runner.renderHook(() => {
+        throw new Error("boom from inside the hook");
+      }),
+    ).toThrow("boom from inside the hook");
   });
 
   it("provider stack: first kit in array = outermost provider", () => {
@@ -262,6 +397,17 @@ describe("createReactTestRunner", () => {
 });
 
 describe("createReactTestRunnerWithQueries", () => {
+  it("renderHook() works the same as the base variant — confirms the type wiring here too", () => {
+    const runner = createReactTestRunnerWithQueries([UserKit]);
+    const { result, rerender, unmount } = runner.renderHook((n: number) => n + 1, {
+      initialProps: 1,
+    });
+    expect(result.current).toBe(2);
+    rerender(10);
+    expect(result.current).toBe(11);
+    unmount();
+  });
+
   it("custom queries: runner.result exposes custom query methods", () => {
     // Define a simple custom query by data-custom attribute
     const queryAllByDataCustom = (container: HTMLElement, value: string) =>

@@ -1,6 +1,6 @@
 import React from "react";
 import type { TestKit } from "@honeybook/hive";
-import { render as rtlRender, renderHook as rtlRenderHook } from "@testing-library/react";
+import { render as rtlRender } from "@testing-library/react";
 import type { Queries, RenderOptions, RenderResult } from "@testing-library/react";
 import { generateProviderStack } from "./generateProviderStack";
 
@@ -8,6 +8,28 @@ type Wrapper = NonNullable<RenderOptions["wrapper"]>;
 
 // GetProviders: no arg, returns a Wrapper. Bound to the runner `this` at call time.
 export type GetProviders = () => Wrapper;
+
+/**
+ * Deliberately NOT imported from `@testing-library/react` (unlike RenderOptions/RenderResult,
+ * which render()/renderComponent() do use directly) — RTL only gained a native `renderHook`,
+ * and these two types describing it, in v13. A consumer pinned to RTL <13 (e.g. honeybook-react
+ * on RTL 11 / React 17) would fail to resolve these names against their own installed RTL
+ * types, since hive-react's public .d.ts type-checks against the CONSUMER's installed RTL, not
+ * hive-react's own. renderHook() below is homegrown specifically so it has zero dependency on
+ * RTL's own renderHook (native or otherwise) — these types describe that homegrown result.
+ */
+export interface RenderHookOptions<Props> {
+  initialProps?: Props;
+  wrapper?: Wrapper;
+}
+
+export interface RenderHookResult<Result, Props> {
+  /** Stable reference; only `.current` changes across renders. */
+  result: { current: Result };
+  /** Re-renders the hook. Pass new props to thread them into the next `hook(props)` call. */
+  rerender: (props?: Props) => void;
+  unmount: () => void;
+}
 
 // The minimal runner surface the render methods touch at runtime. The PUBLIC render-method
 // types (render(): this['result'], custom-query options, etc.) live on each variant's own
@@ -98,16 +120,44 @@ export function createReactRenderMethods(config: {
       seed.call(this, rtlResult);
       return this.result;
     },
-    renderHook(
+    // Homegrown — NOT a thin wrapper over RTL's own renderHook (native, RTL >=13 only) or the
+    // separate @testing-library/react-hooks package. Same core technique RTL's native renderHook
+    // uses internally: a hidden component calls the hook and reports its return value out
+    // through a stable mutable box, rendered via the SAME rtlRender + `wrapper` option
+    // render()/renderComponent() already use above — not manual provider-JSX nesting. This
+    // means renderHook() works identically on every RTL version render()/renderComponent()
+    // already support (>=11), with no version-gated dependency anywhere.
+    renderHook<Props>(
       this: RenderRunnerThis,
-      hook: (props: never) => unknown,
-      options?: { wrapper?: Wrapper },
+      hook: (props: Props) => unknown,
+      options?: RenderHookOptions<Props>,
     ) {
       const wrapper = prepare.call(this);
-      const rtlResult = rtlRenderHook(hook, { wrapper, ...extraRenderOptions, ...options });
-      // renderHook's result is not a RenderResult — seed as-is for reference; cast required.
-      seed.call(this, rtlResult as unknown as RenderResult);
-      return rtlResult;
+      const resultBox: { current: unknown } = { current: undefined };
+      let latestProps = options?.initialProps as Props;
+
+      function HookConsumer() {
+        resultBox.current = hook(latestProps);
+        return null;
+      }
+
+      const ui = rtlRender(<HookConsumer />, {
+        wrapper,
+        ...extraRenderOptions,
+        ...options,
+      } as RenderOptions);
+      seed.call(this, ui);
+
+      return {
+        result: resultBox,
+        rerender: (props?: Props) => {
+          if (props !== undefined) {
+            latestProps = props;
+          }
+          ui.rerender(<HookConsumer />);
+        },
+        unmount: () => ui.unmount(),
+      };
     },
     // Declared void — createBaseTestRunner's wrapper upgrades a void return to `this` for
     // chaining, matching kit with* methods.

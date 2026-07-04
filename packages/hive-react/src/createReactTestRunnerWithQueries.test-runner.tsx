@@ -6,14 +6,9 @@ import type {
   TestKitClasses,
 } from "@honeybook/hive-runner";
 import { queries as defaultQueries } from "@testing-library/react";
-import type {
-  Queries,
-  RenderOptions,
-  RenderHookOptions,
-  RenderHookResult,
-} from "@testing-library/react";
+import type { Queries, RenderOptions } from "@testing-library/react";
 import { createReactRenderMethods } from "./reactRenderMethods";
-import type { GetProviders } from "./reactRenderMethods";
+import type { GetProviders, RenderHookOptions, RenderHookResult } from "./reactRenderMethods";
 import { ReactTestKitWithQueries } from "./ReactTestKit.test-kit";
 
 // A constructor type for ReactTestKitWithQueries instantiated with the caller's actual Q. The
@@ -26,8 +21,10 @@ type ReactTestKitWithQueriesOf<Q extends Queries> = new () => ReactTestKitWithQu
  * Render methods for the custom-queries variant. Like ReactRenderMethods they are
  * result-shape-independent (render/renderComponent return `this['result']`, so the merged
  * result of every kit flows through with no AllKits generic). The one thing they parameterize
- * on is Q — the custom RTL query set — because `options?: RenderOptions<Q>` and renderHook's
- * options genuinely depend on it. `extends { result: unknown }` makes `this['result']` valid at
+ * on is Q — the custom RTL query set — because `options?: RenderOptions<Q>` genuinely depends
+ * on it (renderHook doesn't expose query methods on its result either way, so its
+ * RenderHookOptions/RenderHookResult — homegrown in ./reactRenderMethods, not from RTL, see
+ * there — stay Q-independent). `extends { result: unknown }` makes `this['result']` valid at
  * the declaration; it narrows at the intersection use-site.
  */
 export interface ReactRenderMethodsQ<Q extends Queries> {
@@ -40,7 +37,7 @@ export interface ReactRenderMethodsQ<Q extends Queries> {
   ): this["result"];
   renderHook<Result, Props>(
     hook: (props: Props) => Result,
-    options?: RenderHookOptions<Props, Q>,
+    options?: RenderHookOptions<Props>,
   ): RenderHookResult<Result, Props>;
 }
 
