@@ -39,6 +39,8 @@ export interface ReactRenderMethodsQ<Q extends Queries> {
     hook: (props: Props) => Result,
     options?: RenderHookOptions<Props>,
   ): this["result"] & RenderHookResult<Result, Props>;
+  /** Unmounts and detaches every render this runner produced. Scoped to this runner. */
+  cleanup(): this;
 }
 
 // The full public runner for one call: the merged kit list (Q threaded via AllKits[0]) plus the

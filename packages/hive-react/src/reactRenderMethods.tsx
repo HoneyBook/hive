@@ -85,6 +85,32 @@ function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): W
   return Wrapped;
 }
 
+// --- Between-tests auto-teardown -------------------------------------------------------------
+// Each runner registers its own scoped cleanup here; one module-level afterEach drains them all
+// between tests. hive-react renders through its OWN @testing-library/react instance, so this
+// guarantees runner-mounted content is torn down regardless of the consumer's RTL instance and
+// without relying on RTL's own auto-cleanup firing. The runner is the ONLY mount/unmount surface
+// — there is deliberately no exported global cleanup. Opt out via HIVE_REACT_SKIP_AUTO_CLEANUP,
+// mirroring RTL's RTL_SKIP_AUTO_CLEANUP.
+const activeRunnerCleanups = new Set<() => void>();
+
+// Reach the test-runner globals without a hard dependency on jest/node ambient types (the src
+// build doesn't include them). Optional-typed so it works whether or not they're declared.
+const testGlobals = globalThis as typeof globalThis & {
+  afterEach?: (fn: () => void) => void;
+  process?: { env?: Record<string, string | undefined> };
+};
+
+if (
+  typeof testGlobals.afterEach === "function" &&
+  !testGlobals.process?.env?.HIVE_REACT_SKIP_AUTO_CLEANUP
+) {
+  testGlobals.afterEach(() => {
+    activeRunnerCleanups.forEach((cleanup) => cleanup());
+    activeRunnerCleanups.clear();
+  });
+}
+
 /**
  * The render-family runtime shared by both React runner variants (base + custom-queries).
  * The two variants differ only in three values passed here — the kit whose result carries the
@@ -107,6 +133,21 @@ export function createReactRenderMethods(config: {
   const { seedKitName, getProviders, extraRenderOptions } = config;
   const beforeRenderCallbacks: Array<(result: unknown) => void> = [];
 
+  // Every RTL result this runner mounts, tracked so cleanup() (and the module-level auto-teardown
+  // afterEach) can unmount and detach exactly this runner's renders — the runner owns its own
+  // mount/unmount lifecycle.
+  const ownResults: RenderResult[] = [];
+
+  function cleanupOwn(): void {
+    ownResults.forEach((result) => {
+      result.unmount();
+      const { container } = result;
+      container.parentNode?.removeChild(container);
+    });
+    ownResults.length = 0;
+    activeRunnerCleanups.delete(cleanupOwn);
+  }
+
   function prepare(this: RenderRunnerThis): Wrapper {
     this.run();
     beforeRenderCallbacks.forEach((cb) => cb(this.result));
@@ -115,6 +156,10 @@ export function createReactRenderMethods(config: {
 
   function seed(this: RenderRunnerThis, rtlResult: RenderResult): void {
     this.testKitsMap[seedKitName].seedRenderResult(rtlResult);
+    ownResults.push(rtlResult);
+    // (Re-)register for between-tests auto-teardown; the Set dedups, and a render after a manual
+    // cleanup() re-arms it.
+    activeRunnerCleanups.add(cleanupOwn);
   }
 
   return {
@@ -199,6 +244,12 @@ export function createReactRenderMethods(config: {
     // chaining, matching kit with* methods.
     withBeforeRender(callback: (result: unknown) => void): void {
       beforeRenderCallbacks.push(callback);
+    },
+    // Unmounts and detaches every render this runner produced, then drops it from the auto-
+    // teardown registry. Scoped to THIS runner (not a global) — the sole consumer-facing unmount
+    // surface. Void return is upgraded to `this` by createBaseTestRunner for chaining.
+    cleanup(): void {
+      cleanupOwn();
     },
   };
 }

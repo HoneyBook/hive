@@ -573,4 +573,75 @@ describe("createReactTestRunnerWithQueries", () => {
     const bogusDefaultQuery = result.ui.getByRole;
     expect(bogusDefaultQuery).toBeUndefined();
   });
+
+  it("cleanup() tears down this runner's render in the queries variant too", () => {
+    const runner = createReactTestRunnerWithQueries([UserKit]);
+    runner.render(<div data-testid="q-cleanup">x</div>);
+    expect(document.querySelectorAll('[data-testid="q-cleanup"]').length).toBe(1);
+    const chained = runner.cleanup();
+    expect(chained).toBe(runner);
+    expect(document.querySelectorAll('[data-testid="q-cleanup"]').length).toBe(0);
+  });
+});
+
+describe("runner lifecycle: cleanup()", () => {
+  const countByTestId = (id: string) => document.querySelectorAll(`[data-testid="${id}"]`).length;
+
+  it("cleanup() unmounts and detaches this runner's render, leaving the DOM clean", () => {
+    const runner = createReactTestRunner([UserKit]);
+    runner.render(<div data-testid="lifecycle">x</div>);
+    expect(countByTestId("lifecycle")).toBe(1);
+    runner.cleanup();
+    expect(countByTestId("lifecycle")).toBe(0);
+  });
+
+  it("two runners rendering the same testid in one test don't collide once each is cleaned — the multi-render-per-test regression", () => {
+    const first = createReactTestRunner([UserKit]);
+    first.render(<div data-testid="dup">a</div>);
+    expect(countByTestId("dup")).toBe(1);
+    first.cleanup();
+
+    const second = createReactTestRunner([UserKit]);
+    second.render(<div data-testid="dup">b</div>);
+    // Only the second runner's render is present — the first was torn down.
+    expect(countByTestId("dup")).toBe(1);
+    expect(screen.getByTestId("dup").textContent).toBe("b");
+  });
+
+  it("cleanup() is chainable (returns the runner) and a render after cleanup() re-arms it", () => {
+    const runner = createReactTestRunner([UserKit]);
+    runner.render(<div data-testid="rearm">first</div>);
+    const chained = runner.cleanup();
+    expect(chained).toBe(runner);
+    expect(countByTestId("rearm")).toBe(0);
+
+    // Re-render on the same runner works and is itself cleanable — seed() re-arms the registry.
+    chained.render(<div data-testid="rearm">second</div>);
+    expect(screen.getByTestId("rearm").textContent).toBe("second");
+    runner.cleanup();
+    expect(countByTestId("rearm")).toBe(0);
+  });
+
+  it("renderHook()'s own unmount() coexists with cleanup() — neither throws", () => {
+    const runner = createReactTestRunner([UserKit]);
+    const result = runner.renderHook(() => 1);
+    expect(result.current).toBe(1);
+    expect(() => result.unmount()).not.toThrow();
+    expect(() => runner.cleanup()).not.toThrow();
+  });
+});
+
+describe("runner lifecycle: between-tests auto-teardown", () => {
+  const LEAK_ID = "auto-teardown-leak";
+
+  it("leaves a render mounted without calling cleanup()", () => {
+    const runner = createReactTestRunner([UserKit]);
+    runner.render(<div data-testid={LEAK_ID}>leak</div>);
+    expect(document.querySelectorAll(`[data-testid="${LEAK_ID}"]`).length).toBe(1);
+    // Intentionally no cleanup() — the module-level afterEach must remove it before the next test.
+  });
+
+  it("the previous test's un-cleaned render was removed by the auto-teardown afterEach", () => {
+    expect(document.querySelectorAll(`[data-testid="${LEAK_ID}"]`).length).toBe(0);
+  });
 });

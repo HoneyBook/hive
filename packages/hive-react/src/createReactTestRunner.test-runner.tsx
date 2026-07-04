@@ -44,6 +44,8 @@ export interface ReactRenderMethods {
     hook: (props: Props) => Result,
     options?: RenderHookOptions<Props>,
   ): this["result"] & RenderHookResult<Result, Props>;
+  /** Unmounts and detaches every render this runner produced. Scoped to this runner. */
+  cleanup(): this;
 }
 
 /**
