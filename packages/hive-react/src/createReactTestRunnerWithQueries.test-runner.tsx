@@ -38,7 +38,7 @@ export interface ReactRenderMethodsQ<Q extends Queries> {
   renderHook<Result, Props>(
     hook: (props: Props) => Result,
     options?: RenderHookOptions<Props>,
-  ): RenderHookResult<Result, Props>;
+  ): this["result"] & RenderHookResult<Result, Props>;
 }
 
 // The full public runner for one call: the merged kit list (Q threaded via AllKits[0]) plus the

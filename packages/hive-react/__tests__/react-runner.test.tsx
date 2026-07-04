@@ -98,29 +98,39 @@ describe("createReactTestRunner", () => {
     await expect(runner.run()).resolves.toBeDefined();
   });
 
-  it("renderHook() returns RTL RenderHookResult with generic params preserved", async () => {
+  it("renderHook() returns the same merged shape as runner.result, widened with current/rerender/unmount — not a bespoke narrower object", () => {
     const runner = createReactTestRunner([UserKit]);
+    // Not a reference-identity check — runner.result (hive's TestAppRunner) is a getter that
+    // recomputes a fresh merged object on every single access, so no two reads of it (or of
+    // renderHook()'s return, which is one such read) are ever the same object. What matters is
+    // that renderHook()'s return carries everything a bare runner.result read would.
     // BaseMethods are intersected directly (not through RunnerMethodMap), so
     // renderHook<Result, Props> generics are preserved — no cast needed.
-    const { result } = runner.renderHook(() => ({ value: 42 }));
+    const result = runner.renderHook(() => ({ value: 42 }));
     const value: number = result.current.value;
     expect(value).toBe(42);
+    // Same merged shape also still carries the seeded kit result (UserKit's userId), same as
+    // render()/renderComponent() — confirms this isn't a separate, narrower object.
+    expect(result.userId).toBe("default");
+    expect(result.ui).toBeDefined();
   });
 
-  it("renderHook(): result is a stable reference across renders — only .current changes", () => {
+  it("renderHook(): .current is only live via a fresh runner.result read, not the captured return value", () => {
     const runner = createReactTestRunner([UserKit]);
-    const { result, rerender } = runner.renderHook((n: number) => n * 2, { initialProps: 3 });
-    const stableRef = result;
+    // Same discipline `runner.result.userId` already requires after `withUserId(...)` — `result`
+    // below is a one-time snapshot (runner.result is a getter that recomputes on every access),
+    // so `.rerender()`/`.unmount()` (real, stable closures) can be called off it safely, but
+    // `.current` after that call must be re-read via `runner.result`, not the old snapshot.
+    const result = runner.renderHook((n: number) => n * 2, { initialProps: 3 });
     expect(result.current).toBe(6);
-    rerender(5);
-    expect(result).toBe(stableRef);
-    expect(result.current).toBe(10);
+    result.rerender(5);
+    expect(runner.result.current).toBe(10);
   });
 
   it("renderHook(): rerender() without new props re-invokes the hook with the last props", () => {
     const runner = createReactTestRunner([UserKit]);
     let callCount = 0;
-    const { result, rerender } = runner.renderHook(
+    const result = runner.renderHook(
       (n: number) => {
         callCount += 1;
         return n;
@@ -128,20 +138,20 @@ describe("createReactTestRunner", () => {
       { initialProps: 7 },
     );
     expect(result.current).toBe(7);
-    rerender();
+    result.rerender();
     expect(callCount).toBe(2);
-    expect(result.current).toBe(7);
+    expect(runner.result.current).toBe(7);
   });
 
   it("renderHook(): unmount() tears down the rendered hook consumer and flushes cleanup effects", () => {
     const runner = createReactTestRunner([UserKit]);
     const cleanup = jest.fn();
-    const { unmount } = runner.renderHook(() => {
+    const result = runner.renderHook(() => {
       React.useEffect(() => cleanup, []);
       return null;
     });
     expect(cleanup).not.toHaveBeenCalled();
-    unmount();
+    result.unmount();
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
 
@@ -151,15 +161,20 @@ describe("createReactTestRunner", () => {
       const [count, setCount] = React.useState(0);
       return { count, increment: () => setCount((c) => c + 1) };
     }
-    const { result } = runner.renderHook(useCounter);
+    const result = runner.renderHook(useCounter);
     expect(result.current.count).toBe(0);
     act(() => result.current.increment());
-    expect(result.current.count).toBe(1);
+    // A bare runner.result read can't know which Result type a prior renderHook() call used —
+    // that generic only narrows the RETURN VALUE of the specific renderHook() call itself
+    // (result.current above, typed via `this['result'] & RenderHookResult<Result, Props>`).
+    // Re-reading through runner.result for liveness costs that narrowing; cast it back.
+    const current = runner.result.current as ReturnType<typeof useCounter>;
+    expect(current.count).toBe(1);
   });
 
   it("renderHook(): the hook is rendered inside the runner's provider stack — same wrapper as render()", () => {
     const runner = createReactTestRunner([ContextProviderKit]);
-    const { result } = runner.renderHook(useTestContextValue);
+    const result = runner.renderHook(useTestContextValue);
     expect(result.current).toBe("from-provider");
     // Confirms it's the SAME rtlRender(...) + `wrapper` option path render() uses, not a
     // bare unwrapped render — the provider's own DOM markup is seeded into runner.result.ui too.
@@ -195,17 +210,17 @@ describe("createReactTestRunner", () => {
   it("renderHook(): sequential rerenders each reflect the newly passed props, in order", () => {
     const runner = createReactTestRunner([UserKit]);
     const seen: number[] = [];
-    const { result, rerender } = runner.renderHook(
+    const result = runner.renderHook(
       (n: number) => {
         seen.push(n);
         return n;
       },
       { initialProps: 1 },
     );
-    rerender(2);
-    rerender(3);
+    result.rerender(2);
+    result.rerender(3);
     expect(seen).toEqual([1, 2, 3]);
-    expect(result.current).toBe(3);
+    expect(runner.result.current).toBe(3);
   });
 
   it("renderHook(): a hook that throws during render propagates the error, not swallowed", () => {
@@ -399,13 +414,11 @@ describe("createReactTestRunner", () => {
 describe("createReactTestRunnerWithQueries", () => {
   it("renderHook() works the same as the base variant — confirms the type wiring here too", () => {
     const runner = createReactTestRunnerWithQueries([UserKit]);
-    const { result, rerender, unmount } = runner.renderHook((n: number) => n + 1, {
-      initialProps: 1,
-    });
+    const result = runner.renderHook((n: number) => n + 1, { initialProps: 1 });
     expect(result.current).toBe(2);
-    rerender(10);
-    expect(result.current).toBe(11);
-    unmount();
+    result.rerender(10);
+    expect(runner.result.current).toBe(11);
+    result.unmount();
   });
 
   it("custom queries: runner.result exposes custom query methods", () => {

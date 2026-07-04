@@ -43,7 +43,7 @@ export interface ReactRenderMethods {
   renderHook<Result, Props>(
     hook: (props: Props) => Result,
     options?: RenderHookOptions<Props>,
-  ): RenderHookResult<Result, Props>;
+  ): this["result"] & RenderHookResult<Result, Props>;
 }
 
 /**
@@ -51,7 +51,9 @@ export interface ReactRenderMethods {
  *
  * Always prepends ReactTestKit (via REACT_BASE_KITS). ReactTestKit.result.ui (RenderResult) is
  * seeded by render/renderComponent/renderHook, so runner.result includes both kit results and
- * the RTL render result under `.ui`. render() etc. call this.run() without awaiting
+ * the RTL render result under `.ui`. renderHook() additionally seeds `current`/`rerender`/
+ * `unmount` directly onto the same runner.result (see RenderHookResult). render() etc. call
+ * this.run() without awaiting
  * (fire-and-forget — React handles async state; tests use waitFor/findBy). Provider stack:
  * first kit in the array = outermost provider. `component` is optional on
  * render()/renderComponent() — omit it when the content under test is mounted by a kit's own

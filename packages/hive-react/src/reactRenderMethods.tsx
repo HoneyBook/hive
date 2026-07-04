@@ -23,12 +23,38 @@ export interface RenderHookOptions<Props> {
   wrapper?: Wrapper;
 }
 
+/**
+ * Describes the fields renderHook() seeds onto the runner's result — the SAME merged object
+ * render()/renderComponent() already return (`.ui`, kit results) — not a bespoke object of its
+ * own. RTL's own native renderHook nests its result under a `result` key
+ * (`{ result: { current } }`); hive-react isn't bound to that convention since this is
+ * homegrown, and nesting would collide with the runner's OWN `.result`: a caller naming the
+ * return value `result` — the obvious name, and the one honeybook-react's real call sites
+ * actually used — would end up writing `result.result.current`, which reads badly and was
+ * mistaken for a typo more than once in practice. Intersected onto `this['result']` at the
+ * public renderHook() signature (see createReactTestRunner.test-runner.tsx and the
+ * WithQueries variant) — same `this['result']` pattern render()/renderComponent() use, just
+ * widened with these per-call fields.
+ *
+ * Note on liveness: `runner.result` (from @honeybook/hive's TestAppRunner) is a GETTER that
+ * recomputes a fresh merge of every kit's `.result` on every access — it is not a persistent
+ * object. So `.rerender()`/`.unmount()` are stable across any snapshot (real closures, callable
+ * from an old reference), but `.current` is only live if re-read via `runner.result.current` —
+ * the exact same discipline already required for any kit-seeded field (e.g. re-reading
+ * `runner.result.userId` after `runner.withUserId(...)`, not a value captured before it).
+ */
 export interface RenderHookResult<Result, Props> {
-  /** Stable reference; only `.current` changes across renders. */
-  result: { current: Result };
+  /** Only live via a fresh `runner.result.current` read — see this type's own doc comment. */
+  current: Result;
   /** Re-renders the hook. Pass new props to thread them into the next `hook(props)` call. */
   rerender: (props?: Props) => void;
   unmount: () => void;
+}
+
+interface ReactHookSeedKit {
+  seedRenderResult(rtlResult: RenderResult): void;
+  seedHookValue(current: unknown): void;
+  seedHookActions(rerender: (props?: unknown) => void, unmount: () => void): void;
 }
 
 // The minimal runner surface the render methods touch at runtime. The PUBLIC render-method
@@ -38,7 +64,7 @@ interface RenderRunnerThis {
   run(): Promise<unknown>;
   result: { ui: RenderResult };
   testKits: TestKit[];
-  testKitsMap: Record<string, { seedRenderResult(rtlResult: RenderResult): void }>;
+  testKitsMap: Record<string, ReactHookSeedKit>;
 }
 
 function getProviderStack(testKits: TestKit[], extraProvider?: () => Wrapper): Wrapper {
@@ -122,22 +148,27 @@ export function createReactRenderMethods(config: {
     },
     // Homegrown — NOT a thin wrapper over RTL's own renderHook (native, RTL >=13 only) or the
     // separate @testing-library/react-hooks package. Same core technique RTL's native renderHook
-    // uses internally: a hidden component calls the hook and reports its return value out
-    // through a stable mutable box, rendered via the SAME rtlRender + `wrapper` option
-    // render()/renderComponent() already use above — not manual provider-JSX nesting. This
-    // means renderHook() works identically on every RTL version render()/renderComponent()
-    // already support (>=11), with no version-gated dependency anywhere.
+    // uses internally: a hidden component calls the hook and reports its return value out,
+    // rendered via the SAME rtlRender + `wrapper` option render()/renderComponent() already use
+    // above — not manual provider-JSX nesting. This means renderHook() works identically on
+    // every RTL version render()/renderComponent() already support (>=11), with no
+    // version-gated dependency anywhere.
     renderHook<Props>(
       this: RenderRunnerThis,
       hook: (props: Props) => unknown,
       options?: RenderHookOptions<Props>,
     ) {
       const wrapper = prepare.call(this);
-      const resultBox: { current: unknown } = { current: undefined };
+      // Seeds onto the SEED KIT instance (like seedRenderResult() does for `.ui`), not a
+      // snapshot of `this.result` — this.result is a getter that recomputes fresh on every
+      // access (@honeybook/hive's TestAppRunner), so mutating a snapshot would be discarded
+      // the moment anything re-reads it. `current` is re-seeded on every render, since it's
+      // the hook's latest return value each time; the kit is the one persistent place for it.
+      const kit = this.testKitsMap[seedKitName];
       let latestProps = options?.initialProps as Props;
 
       function HookConsumer() {
-        resultBox.current = hook(latestProps);
+        kit.seedHookValue(hook(latestProps));
         return null;
       }
 
@@ -148,16 +179,21 @@ export function createReactRenderMethods(config: {
       } as RenderOptions);
       seed.call(this, ui);
 
-      return {
-        result: resultBox,
-        rerender: (props?: Props) => {
+      kit.seedHookActions(
+        // Cast: seedHookActions takes a loose (props?: unknown) => void since the kit doesn't
+        // know the caller's Props generic; the public renderHook() signature re-narrows it via
+        // `this['result'] & RenderHookResult<Result, Props>` (same loose-internals-plus-cast
+        // pattern used throughout this file, e.g. extraMethods as ExtraMethodsShape elsewhere).
+        ((props?: Props) => {
           if (props !== undefined) {
             latestProps = props;
           }
           ui.rerender(<HookConsumer />);
-        },
-        unmount: () => ui.unmount(),
-      };
+        }) as (props?: unknown) => void,
+        () => ui.unmount(),
+      );
+
+      return this.result;
     },
     // Declared void — createBaseTestRunner's wrapper upgrades a void return to `this` for
     // chaining, matching kit with* methods.
