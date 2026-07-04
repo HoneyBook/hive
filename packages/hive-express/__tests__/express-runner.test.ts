@@ -113,3 +113,20 @@ describe("createExpressTestRunner", () => {
     expect(runner.result).toBeDefined();
   });
 });
+
+// ─── Type contract (compile-time; anchors the RunnerFactory ban + anti-any surface) ─────────
+describe("createExpressTestRunner — type contract", () => {
+  it("bans explicit undefined for extraMethods and does not degrade to any", () => {
+    // @ts-expect-error — undefined matches neither overload; pass {} to skip extraMethods.
+    createExpressTestRunner([], undefined);
+
+    const runner = createExpressTestRunner([], {});
+    // @ts-expect-error — {} must NOT widen the runner to admit arbitrary methods.
+    const bogusMethod = runner.withNopeDoesNotExist;
+    // @ts-expect-error — result must not be `any`; this property does not exist.
+    const bogusResult = runner.result.nopeDoesNotExist;
+    expect(bogusMethod).toBeUndefined();
+    expect(bogusResult).toBeUndefined();
+    expect(runner).toBeDefined();
+  });
+});

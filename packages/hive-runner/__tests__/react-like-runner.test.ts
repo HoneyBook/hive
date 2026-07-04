@@ -1,7 +1,12 @@
 import { TestKit, mergeTestKits } from "@honeybook/hive";
 import type { TestKitClasses } from "@honeybook/hive";
 import { createBaseTestRunner } from "../src/createBaseTestRunner";
-import type { AppRunnerWithExtraMethods, NoExecuteFn, RunnerFactory } from "../src/types";
+import type {
+  AppRunnerWithExtraMethods,
+  ExtraMethodsShape,
+  NoExecuteFn,
+  RunnerFactory,
+} from "../src/types";
 
 // --- Test kit ---
 class UserKit extends TestKit {
@@ -16,31 +21,30 @@ class UserKit extends TestKit {
   defaultCallback = () => this.withUserId("default");
 }
 
-// --- Pattern A: wrapping factory with merged extra methods ---
+// --- Pattern A: a react-like runner authored against the RunnerFactory contract ---
 let renderCallCount = 0;
 
 type UserKitClasses = readonly [typeof UserKit];
 
-// No base kits of its own (BaseKits = []) — still goes through mergeTestKits, same as any
-// real RunnerFactory implementation, so it stays compatible with the RunnerFactory contract
-// regardless of whether callers pass a plain kits array or an already-merged composite.
-//
-// No explicit return-type annotation — same as every real named runner (createExpressTestRunner,
-// atlas's createServiceTestRunner, ...): let it flow from mergeTestKits + createBaseTestRunner's
-// own inference. Hand-writing a return type here would force mergeTestKits's arguments to produce
-// an exactly-matching type (right down to whether `[]` infers as the tuple `[]` or as `never[]`),
-// which is friction real callers never hit — they never write this annotation either.
-function createReactLikeRunner<
-  KitsClasses extends TestKitClasses,
-  ExtraMethods extends Record<string, (...args: any[]) => unknown> = Record<never, never>,
->(kits: KitsClasses, callerExtraMethods?: ExtraMethods) {
-  const mergedKits = mergeTestKits([] as const, kits);
-  type AllKitsClasses = typeof mergedKits;
-  type MergedMethods = { render(): void } & ExtraMethods;
+// render is a kit-INDEPENDENT base method (RunnerFactory's 3rd type arg), NOT stuffed into
+// ExtraMethods — the shape that lets a react-like runner author against a FIXED RunnerFactory
+// instantiation rather than a bespoke generic function. (createReactTestRunner does the same,
+// with render(): this['result'].)
+interface ReactLikeBaseMethods {
+  render(): void;
+}
 
-  const builtIn: { render(): void } & ThisType<
-    AppRunnerWithExtraMethods<AllKitsClasses, MergedMethods>
-  > = {
+// No base kits of its own (BaseKits = []) — still goes through mergeTestKits, same as any
+// real RunnerFactory implementation. Authored via a const annotation with loose param types:
+// contextual typing does not flow from an overloaded type into an arrow's params, and the body
+// casts through into createBaseTestRunner anyway.
+const createReactLikeRunner: RunnerFactory<readonly [], NoExecuteFn, ReactLikeBaseMethods> = (
+  kits: TestKitClasses,
+  callerExtraMethods?: ExtraMethodsShape,
+) => {
+  const mergedKits = mergeTestKits([] as const, kits);
+
+  const builtIn: ReactLikeBaseMethods & ThisType<{ run(): Promise<unknown> }> = {
     render() {
       renderCallCount++;
       // render() calls run() — delegates to the runner (synchronous fire-and-forget)
@@ -48,24 +52,17 @@ function createReactLikeRunner<
     },
   };
 
-  const merged = { ...builtIn, ...(callerExtraMethods ?? {}) } as MergedMethods &
-    ThisType<AppRunnerWithExtraMethods<AllKitsClasses, MergedMethods>>;
+  const merged = { ...builtIn, ...(callerExtraMethods ?? {}) } as ExtraMethodsShape;
 
-  return createBaseTestRunner(mergedKits, merged) as unknown as AppRunnerWithExtraMethods<
-    AllKitsClasses,
-    MergedMethods
-  >;
-}
+  return createBaseTestRunner(mergedKits, merged) as never;
+};
 
-const _factoryTypeCheck: RunnerFactory<readonly [], NoExecuteFn, { render(): void }> =
-  createReactLikeRunner;
-
-describe("createBaseTestRunner — react-like wrapping factory (Pattern A)", () => {
+describe("createBaseTestRunner — react-like runner authored via RunnerFactory (Pattern A)", () => {
   beforeEach(() => {
     renderCallCount = 0;
   });
 
-  it("render() calls run() and returns the runner", async () => {
+  it("render() calls run() and the runner exposes kit results", async () => {
     const runner = createReactLikeRunner([UserKit]);
     runner.withUserId("test-user");
 
@@ -83,9 +80,7 @@ describe("createBaseTestRunner — react-like wrapping factory (Pattern A)", () 
     let capturedUserId: string | undefined;
 
     const runner = createReactLikeRunner([UserKit], {
-      checkUser(
-        this: AppRunnerWithExtraMethods<[...UserKitClasses], { render(): void; checkUser(): void }>,
-      ) {
+      checkUser(this: AppRunnerWithExtraMethods<[...UserKitClasses], { checkUser(): void }>) {
         // `this.result` must type-check — proves ThisType<> covers extra methods
         capturedUserId = this.result.userId;
       },
@@ -116,5 +111,16 @@ describe("createBaseTestRunner — react-like wrapping factory (Pattern A)", () 
     });
     const returned = runner.setFlag().withUserId("chain-test");
     expect(returned).toBe(runner);
+  });
+
+  it("passing undefined for extraMethods is a compile error (the ban), not a silent any-widening", () => {
+    // @ts-expect-error — explicit undefined matches neither overload; pass {} to skip extraMethods.
+    createReactLikeRunner([UserKit], undefined);
+    // The supported way to skip extra methods while still constructing the runner:
+    const runner = createReactLikeRunner([UserKit], {});
+    // @ts-expect-error — runner must not have degraded to `any`; this method does not exist.
+    const bogus = runner.withNope;
+    expect(bogus).toBeUndefined();
+    expect(renderCallCount).toBe(0);
   });
 });

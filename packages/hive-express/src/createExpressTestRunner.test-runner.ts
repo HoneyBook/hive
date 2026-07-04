@@ -1,7 +1,12 @@
 import { TestKit } from "@honeybook/hive";
 import type { CombinedTestKitsResult } from "@honeybook/hive";
 import { createBaseTestRunner } from "@honeybook/hive-runner";
-import type { RunnerFactory, NoMethods } from "@honeybook/hive-runner";
+import type {
+  ExtraMethodsShape,
+  NoMethods,
+  RunnerFactory,
+  TestKitClasses,
+} from "@honeybook/hive-runner";
 import supertest from "supertest";
 import { RequestConfigTestKit } from "./RequestConfigTestKit.test-kit";
 
@@ -10,12 +15,16 @@ export type ExpressBaseKits = typeof EXPRESS_BASE_KITS;
 
 type ExpressHandle = { request: ReturnType<typeof supertest.agent> };
 
+// Loose, explicit param types: contextual typing does not flow from an overloaded type into
+// an arrow's params, and extraMethods must be optional to satisfy the kits-only overload. The
+// body casts into createBaseTestRunner anyway; the public banned/overloaded surface comes from
+// the RunnerFactory annotation.
 export const createExpressTestRunner: RunnerFactory<
   ExpressBaseKits,
   ExpressHandle,
   NoMethods,
   never
-> = (kits, extraMethods) => {
+> = (kits: TestKitClasses, extraMethods?: ExtraMethodsShape) => {
   const allKits = [RequestConfigTestKit, ...kits];
 
   type ExecuteThis = {
