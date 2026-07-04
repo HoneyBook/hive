@@ -42,15 +42,22 @@ export interface ReactRenderMethodsQ<Q extends Queries> {
 }
 
 // The full public runner for one call: the merged kit list (Q threaded via AllKits[0]) plus the
-// caller's extra methods, intersected with the Q render methods. Mirrors RunnerResult, but with
-// a per-call Q that a fixed RunnerFactory `BaseKits` cannot carry — the sole reason this variant
-// isn't a plain RunnerFactory const like createReactTestRunner.
+// caller's extra methods, with the Q render methods threaded through the `Handle` position (3rd
+// arg) — NOT intersected at the top level. Handle is raw-intersected into the runner that every
+// chained `with*()` returns, so render/renderComponent/renderHook/withBeforeRender survive
+// chaining (`runner.withX().render()`); a top-level intersection is dropped after the first
+// `with*()`. See RunnerResult in @honeybook/hive-runner for the full rationale. Mirrors
+// RunnerResult, but with a per-call Q that a fixed RunnerFactory `BaseKits` cannot carry — the
+// sole reason this variant isn't a plain RunnerFactory const like createReactTestRunner.
 type ReactQueriesRunner<
   KitsClasses extends TestKitClasses,
   ExtraMethods extends object,
   Q extends Queries,
-> = AppRunnerWithExtraMethods<[ReactTestKitWithQueriesOf<Q>, ...KitsClasses], ExtraMethods> &
-  ReactRenderMethodsQ<Q>;
+> = AppRunnerWithExtraMethods<
+  [ReactTestKitWithQueriesOf<Q>, ...KitsClasses],
+  ExtraMethods,
+  ReactRenderMethodsQ<Q>
+>;
 
 /**
  * The custom-queries counterpart to RunnerFactory: a two-overload factory type that bans

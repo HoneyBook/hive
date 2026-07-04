@@ -109,13 +109,19 @@ export type ExtraMethodsShape = Record<string, (...args: any[]) => unknown>;
  * than nesting, so depth is unlimited and every layer uses the identical
  * composition.
  *
- * BaseMethods is intersected DIRECTLY (not through AppRunnerWithExtraMethods /
- * RunnerMethodMap). This preserves generic base-method signatures such as
- * renderHook<Result, Props>(...) and, crucially, `this['result']`-returning
- * render methods: polymorphic `this` re-resolves to this full intersection at
- * every call site, so a kit-INDEPENDENT base-methods interface still yields the
- * fully-merged result — which is what lets React use a FIXED RunnerFactory
- * instantiation instead of a bespoke generic function.
+ * BaseMethods is threaded through AppRunnerWithExtraMethods's `Handle` position
+ * (intersected with any real execute-hook Handle), NOT intersected at the top
+ * level. Handle is intersected RAW into the runner — never mapped through
+ * RunnerMethodMap — so this preserves generic base-method signatures such as
+ * renderHook<Result, Props>(...) and `this['result']`-returning render methods
+ * exactly as a top-level intersection would (polymorphic `this` re-resolves to
+ * the full runner at every call site, so a kit-INDEPENDENT base-methods
+ * interface still yields the fully-merged result — which is what lets React use
+ * a FIXED RunnerFactory instantiation instead of a bespoke generic function).
+ * The reason it must go through Handle rather than the top level: Handle flows
+ * into the runner that every chained `with*()` call returns, so `render`/
+ * `renderHook`/`withBeforeRender` survive chaining (`runner.withX().render()`);
+ * a top-level intersection is dropped after the first `with*()`.
  */
 export type RunnerResult<
   BaseKits extends TestKitClasses,
@@ -127,9 +133,8 @@ export type RunnerResult<
 > = AppRunnerWithExtraMethods<
   MergeTestKits<[BaseKits, KitsClasses]>,
   ExtraMethods,
-  ResolveNever<Handle, Record<never, never>>
-> &
-  ResolveNever<BaseMethods, Record<never, never>>;
+  ResolveNever<Handle, Record<never, never>> & ResolveNever<BaseMethods, Record<never, never>>
+>;
 
 /**
  * Typed factory shape for platform runners (React, Express, Temporal, …).

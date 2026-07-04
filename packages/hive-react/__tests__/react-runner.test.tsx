@@ -257,13 +257,40 @@ describe("createReactTestRunner", () => {
         // void extra method
       },
     });
-    // withCustomId() returns the runner — verify the chain lands on a kit method.
-    // Note: BaseMethods (render etc.) are intersected on the outer return type, so they
-    // are not present on the intermediate chain type. Use a kit method to verify chaining,
-    // then call render on the original runner.
-    runner.withCustomId().withUserId("chained-test");
-    const result = runner.render(<div data-testid="chained">ok</div>);
+    // withCustomId() returns the runner — verify the chain lands on a kit method, then a
+    // render method (render/renderHook) at the end of the same chain. BaseMethods are threaded
+    // through the Handle position, so they survive `with*()` chaining (see the chaining
+    // regression test below).
+    const result = runner
+      .withCustomId()
+      .withUserId("chained-test")
+      .render(<div data-testid="chained">ok</div>);
     expect(result.ui.getByTestId("chained")).toBeTruthy();
+  });
+
+  it("render methods survive with*() chaining — runner.withX().render()/.renderHook() type-check and work (regression for the top-level-intersection drop)", () => {
+    const runner = createReactTestRunner([UserKit]);
+    // The advertised chainable API (README/AGENTS): with*() then a render method on the SAME
+    // chain. Previously render/renderHook were intersected at the top level, so they were
+    // dropped from the static type after the first with*() — the whole reason the honeybook-react
+    // wrapper had to re-thread them manually. Threading BaseMethods through Handle fixes it.
+    const rendered = runner.withUserId("chain-render").render(<div data-testid="c">x</div>);
+    expect(rendered.userId).toBe("chain-render");
+    expect(rendered.ui.getByTestId("c")).toBeTruthy();
+
+    const hookRunner = createReactTestRunner([UserKit]);
+    const hookResult = hookRunner.withUserId("chain-hook").renderHook(() => 42);
+    expect(hookResult.current).toBe(42);
+    expect(hookResult.userId).toBe("chain-hook");
+
+    // withBeforeRender is also a base method — it too must remain chainable off a kit with*().
+    const brRunner = createReactTestRunner([UserKit]);
+    const seen: string[] = [];
+    brRunner
+      .withUserId("chain-br")
+      .withBeforeRender((r) => seen.push(r.userId))
+      .render(<div data-testid="br-chain">y</div>);
+    expect(seen).toEqual(["chain-br"]);
   });
 
   it("getProviders wraps INSIDE the kit provider stack", () => {
@@ -419,6 +446,20 @@ describe("createReactTestRunnerWithQueries", () => {
     result.rerender(10);
     expect(runner.result.current).toBe(11);
     result.unmount();
+  });
+
+  it("render methods survive with*() chaining in the queries variant too — runner.withX().render()/.renderHook()", () => {
+    const runner = createReactTestRunnerWithQueries([UserKit]);
+    const rendered = runner.withUserId("q-chain").render(<div data-testid="qc">x</div>);
+    expect(rendered.userId).toBe("q-chain");
+    expect(rendered.ui.getByTestId("qc")).toBeTruthy();
+
+    const hookRunner = createReactTestRunnerWithQueries([UserKit]);
+    const hookResult = hookRunner.withUserId("q-hook").renderHook((n: number) => n + 1, {
+      initialProps: 1,
+    });
+    expect(hookResult.current).toBe(2);
+    expect(hookResult.userId).toBe("q-hook");
   });
 
   it("custom queries: runner.result exposes custom query methods", () => {
