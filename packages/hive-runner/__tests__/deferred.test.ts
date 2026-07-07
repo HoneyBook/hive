@@ -123,4 +123,43 @@ describe("runner.defer() — async derived payloads", () => {
 
     expect(r.profileFor).toBe("u_1");
   });
+
+  // Type-level guards: these assert the defer types don't silently degrade to
+  // `any`/`unknown`. They're enforced by `tsc` (typecheck), not jest — if a type
+  // widened to `any`, the access below would stop erroring and the
+  // `@ts-expect-error` directive would become unused (TS2578), failing the build.
+  it("does not silently degrade defer's kits, resolved value, or result to any/unknown", async () => {
+    const runner = createBaseTestRunner([AttachmentKit, ConversationKit]);
+
+    runner.withAttachment("att_1").withConversation(
+      runner.defer(async (kits) => {
+        // @ts-expect-error — kits must not degrade to `any`; NoSuchKit is not a registered kit.
+        kits.NoSuchKit;
+
+        const attachment = await kits.AttachmentKit.value;
+        // @ts-expect-error — the resolved value must not degrade to `any`; no such field.
+        attachment.notAField;
+
+        return { linkedAttachmentId: attachment.attachmentId };
+      }),
+    );
+
+    const r = await runner.run();
+    // @ts-expect-error — the combined result must not degrade to any/unknown; no such field.
+    r.notAResultField;
+
+    expect(r.linkedAttachmentId).toBe("att_1");
+  });
+
+  it("enforces the deferred payload shape against the with* parameter (not Deferred<any>)", () => {
+    const runner = createBaseTestRunner([AttachmentKit, ConversationKit]);
+
+    runner.withConversation(
+      // @ts-expect-error — deferred payload must match withConversation's arg; wrongKey is not part of it.
+      runner.defer(async () => ({ wrongKey: "x" })),
+    );
+
+    // Purely a type-level assertion — not run(). Give the case a runtime expectation.
+    expect(typeof runner.defer).toBe("function");
+  });
 });
