@@ -1,4 +1,5 @@
 import { TestKit } from "./test-kit";
+import type { Deferred } from "./deferred";
 
 /**
  * Base class for test kits that need async seeding.
@@ -30,6 +31,15 @@ export abstract class AsyncTestKit<
   private _promise: Promise<TResult> | undefined = undefined;
 
   /**
+   * Deferred with* calls (from `runner.defer(cb)`) awaiting resolve-time.
+   * Drained by resolve() before build(), so each callback can await deps' value.
+   */
+  private _deferredQueue: Array<{
+    method: (...args: any[]) => unknown;
+    deferred: Deferred<unknown>;
+  }> = [];
+
+  /**
    * The async result dependents await.
    * This getter triggers resolve() lazily so a dep awaiting `dep.value`
    * before the parent run() Promise.all reaches it still fires build().
@@ -44,12 +54,43 @@ export abstract class AsyncTestKit<
    */
   resolve(): Promise<TResult> {
     if (!this._promise) {
-      this._promise = this.build().then((r) => {
-        this.result = r;
-        return r;
-      });
+      this._promise = this.applyDeferredQueue()
+        .then(() => this.build())
+        .then((r) => {
+          this.result = r;
+          return r;
+        });
     }
     return this._promise;
+  }
+
+  /**
+   * Queue a deferred with* call (from `runner.defer(cb)`). init()/markAsInit run
+   * now — so the kit counts as armed and `initAllTestKitsWithDefaults` skips its
+   * default — while the payload is computed and applied at resolve-time (before
+   * build()). This splits TestKit.callWith: init+mark here, beforeWith+apply in
+   * applyDeferredQueue().
+   */
+  queueDeferred(method: (...args: any[]) => unknown, deferred: Deferred<unknown>): void {
+    if (!this.wasInit) {
+      this.init();
+    }
+    this.markAsInit();
+    this._deferredQueue.push({ method, deferred });
+  }
+
+  /**
+   * Drain queued deferred with* calls before build(): await each callback (it may
+   * read `await kits.X.value`), then apply it through the kit's own with* exactly
+   * as an eager call would — so build() sees the derived payload and never knows a
+   * defer happened.
+   */
+  private async applyDeferredQueue(): Promise<void> {
+    for (const { method, deferred } of this._deferredQueue) {
+      const payload = await deferred.invoke();
+      this.beforeWith();
+      method.apply(this, [payload]);
+    }
   }
 
   /**
@@ -67,5 +108,6 @@ export abstract class AsyncTestKit<
     this._promise = undefined;
     this.result = {} as TResult;
     this._wasInit = false;
+    this._deferredQueue = [];
   }
 }

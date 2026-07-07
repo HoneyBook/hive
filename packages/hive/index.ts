@@ -8,6 +8,7 @@
 export { TestKit } from "./test-kits/test-kit";
 export { AsyncTestKit } from "./test-kits/async-test-kit";
 export { TestAppRunner, createAppRunner } from "./app-runner/test-app-runner";
+export { isDeferred, createDeferred } from "./test-kits/deferred";
 
 // Utilities
 export {
@@ -25,6 +26,7 @@ export type {
   TestKitsDeepDependencies,
 } from "./test-kits/test-kits.types";
 export type { MergedTestKits, MergeTestKits } from "./test-kits/merge-test-kits";
+export type { Deferred } from "./test-kits/deferred";
 
 // App runner types
 export type {

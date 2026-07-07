@@ -1,9 +1,10 @@
-import { TestAppRunner, createAppRunner, AsyncTestKit } from "@honeybook/hive";
+import { TestAppRunner, createAppRunner, AsyncTestKit, createDeferred } from "@honeybook/hive";
 import type {
   CombinedTestKitsResultFromClasses,
   TestKitsInstances,
   TestKitArrayToRecord,
   TestKitClasses,
+  Deferred,
 } from "@honeybook/hive";
 import type { AppRunnerWithExtraMethods } from "./types";
 
@@ -74,6 +75,23 @@ export class BaseTestRunner<
 
   _setExecute(execute: ExecuteFn): void {
     this._execute = execute;
+  }
+
+  /**
+   * Create a deferred payload for an async kit's `with*`. The callback receives
+   * this runner's testKitsMap and runs at resolve-time (after deps settle), so it
+   * can `await kits.X.value`:
+   *
+   *   runner.withConversation(runner.defer(async (kits) => ({
+   *     attachmentId: (await kits.AttachmentKit.value).id,
+   *   })));
+   *
+   * Async-only — the resulting Deferred passed to a synchronous kit's `with*` throws.
+   */
+  defer<TPayload>(
+    callback: (kits: TestKitArrayToRecord<TestKits>) => TPayload | Promise<TPayload>,
+  ): Deferred<TPayload> {
+    return createDeferred(() => callback(this.testKitsMap));
   }
 }
 
