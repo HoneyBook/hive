@@ -84,6 +84,13 @@ export abstract class AsyncTestKit<
    * read `await kits.X.value`), then apply it through the kit's own with* exactly
    * as an eager call would — so build() sees the derived payload and never knows a
    * defer happened.
+   *
+   * Because this runs after every chain-time with* call, a deferred payload always
+   * overrides an eager/immediate one on the same kit, regardless of chain order.
+   *
+   * No cycle detection: if two kits' deferred callbacks (or a callback and a
+   * build()) mutually `await` each other's `.value`, the memoized promises depend
+   * on each other and the `run()` flush hangs with no error. Don't create a cycle.
    */
   private async applyDeferredQueue(): Promise<void> {
     for (const { method, deferred } of this._deferredQueue) {

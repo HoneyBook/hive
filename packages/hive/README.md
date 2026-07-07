@@ -150,6 +150,8 @@ Notes:
 - **Async-only.** `runner.defer()` is only valid on an `AsyncTestKit`'s `with*`. Passing the result to a synchronous kit's `with*` throws — use the eager `(result) => payload` form there instead.
 - **Await, don't read.** Inside the callback, read dependencies via `await kits.X.value` (the memoized async result), never `kits.X.result` (which may not be settled yet). Ordering self-organizes: each kit's `build()`/deferred callback awaits what it needs.
 - **Typed kit access requires a literal `name`.** For `kits.X` to resolve to a specific kit (rather than a union of all kits), the kit's `name` getter must be typed as a string literal — `get name(): "AttachmentKit"` — as the codebase already does by convention.
+- **Deferred overrides eager on the same kit.** A deferred call is applied at resolve-time, after every chain-time call, so `withX(payload).withX(defer(cb))` (and the reverse order) both end with the deferred value — the deferred payload always wins.
+- **No cycle detection.** If two kits' deferred callbacks mutually `await` each other's `.value`, the flush hangs with no error. Keep the dependency graph acyclic.
 
 ## 🏗️ **Architecture**
 

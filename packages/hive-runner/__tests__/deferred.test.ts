@@ -169,4 +169,32 @@ describe("runner.defer() — async derived payloads", () => {
     // Purely a type-level assertion — not run(). Give the case a runtime expectation.
     expect(typeof runner.defer).toBe("function");
   });
+
+  it("applies the deferred payload after any chain-time with* on the same kit (deferred wins, either order)", async () => {
+    // Eager/direct call first, deferred second.
+    const eagerFirst = createBaseTestRunner([AttachmentKit, ConversationKit]);
+    eagerFirst
+      .withAttachment("att_A")
+      .withConversation({ linkedAttachmentId: "chain-time" })
+      .withConversation(
+        eagerFirst.defer(async (kits) => ({
+          linkedAttachmentId: (await kits.AttachmentKit.value).attachmentId,
+        })),
+      );
+    const r1 = await eagerFirst.run();
+    expect(r1.linkedAttachmentId).toBe("att_A");
+
+    // Deferred call first, eager/direct second — deferred still wins (applied at resolve-time).
+    const deferredFirst = createBaseTestRunner([AttachmentKit, ConversationKit]);
+    deferredFirst
+      .withAttachment("att_B")
+      .withConversation(
+        deferredFirst.defer(async (kits) => ({
+          linkedAttachmentId: (await kits.AttachmentKit.value).attachmentId,
+        })),
+      )
+      .withConversation({ linkedAttachmentId: "chain-time" });
+    const r2 = await deferredFirst.run();
+    expect(r2.linkedAttachmentId).toBe("att_B");
+  });
 });
