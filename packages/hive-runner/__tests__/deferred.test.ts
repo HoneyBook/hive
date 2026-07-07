@@ -130,15 +130,21 @@ describe("runner.defer() — async derived payloads", () => {
   // `@ts-expect-error` directive would become unused (TS2578), failing the build.
   it("does not silently degrade defer's kits, resolved value, or result to any/unknown", async () => {
     const runner = createBaseTestRunner([AttachmentKit, ConversationKit]);
+    // Each probe below must be a type error (property does not exist on a
+    // strongly-typed value). If a type widened to `any`, the access would stop
+    // erroring, the @ts-expect-error would go unused, and tsc would fail (TS2578).
+    // Probes are pushed (a call, not a bare expression) so eslint's
+    // no-unused-expressions rule is satisfied while the type assertion stands.
+    const probes: unknown[] = [];
 
     runner.withAttachment("att_1").withConversation(
       runner.defer(async (kits) => {
         // @ts-expect-error — kits must not degrade to `any`; NoSuchKit is not a registered kit.
-        kits.NoSuchKit;
+        probes.push(kits.NoSuchKit);
 
         const attachment = await kits.AttachmentKit.value;
         // @ts-expect-error — the resolved value must not degrade to `any`; no such field.
-        attachment.notAField;
+        probes.push(attachment.notAField);
 
         return { linkedAttachmentId: attachment.attachmentId };
       }),
@@ -146,9 +152,10 @@ describe("runner.defer() — async derived payloads", () => {
 
     const r = await runner.run();
     // @ts-expect-error — the combined result must not degrade to any/unknown; no such field.
-    r.notAResultField;
+    probes.push(r.notAResultField);
 
     expect(r.linkedAttachmentId).toBe("att_1");
+    expect(probes).toEqual([undefined, undefined, undefined]);
   });
 
   it("enforces the deferred payload shape against the with* parameter (not Deferred<any>)", () => {
