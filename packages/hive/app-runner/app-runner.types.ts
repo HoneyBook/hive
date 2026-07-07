@@ -3,6 +3,7 @@ import { TestAppRunner } from "./test-app-runner";
 import { TestKit } from "../test-kits/test-kit";
 import { TestKitClasses } from "../test-kits/test-kits.types";
 import { MergedTestKits } from "../test-kits/merge-test-kits";
+import type { Deferred } from "../test-kits/deferred";
 
 /** Destruct the first item type in the array out and keep the rest */
 export type Tail<T extends any[]> = T extends [T[0], ...infer Rest] ? Rest : [];
@@ -86,6 +87,7 @@ export type WithTestKitMethodBuilderSupport<
               ) => Args[0],
               ...args: Tail<Args>,
             ]
+          | [deferredPayload: Deferred<Args[0]>, ...args: Tail<Args>]
       ) => Return
     : never;
 };

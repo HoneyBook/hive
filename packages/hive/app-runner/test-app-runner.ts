@@ -1,4 +1,6 @@
 import { TestKit } from "../test-kits/test-kit";
+import { AsyncTestKit } from "../test-kits/async-test-kit";
+import { isDeferred } from "../test-kits/deferred";
 import { isFunction } from "lodash-es";
 import {
   buildTestKitRecordFromArray,
@@ -56,6 +58,18 @@ export abstract class TestAppRunner<
 
       (this as any)[methodName] = (...props: any[]) => {
         testKit.initDependentTestKitsIfNeeded();
+
+        // A Deferred (from runner.defer(cb)) is async-only: queue the with* call
+        // to resolve-time instead of applying it eagerly here.
+        if (isDeferred(props[0])) {
+          if (!(testKit instanceof AsyncTestKit)) {
+            throw new Error(
+              `runner.defer() is only supported on async test kits, but ${testKit.name}.${methodName}() is synchronous. Pass a plain payload or a (result) => payload callback instead.`,
+            );
+          }
+          testKit.queueDeferred(method as (...args: any[]) => unknown, props[0]);
+          return this;
+        }
 
         // If the first prop is a function, call it with the current accommodated result.
         if (isFunction(props[0])) {

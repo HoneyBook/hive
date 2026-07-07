@@ -119,6 +119,40 @@ export class ProjectTestKit extends TestKit {
 }
 ```
 
+### **Derived Payloads**
+
+Sometimes a `with*` payload isn't known up front — it depends on another kit's built data (a conversation that references an attachment's id, a login that uses the seeded user's email). Instead of hard-coding the dependency inside the kit's `build()`, derive the payload inline at the call site. There are two forms.
+
+**Eager — `(result) => payload` (synchronous kits).** Pass a callback as the first argument to a `with*`. It runs immediately, at chain-construction time, and receives the runner's combined `result` as it stands so far:
+
+```typescript
+runner
+  .withUser({ id: "u_1", email: "a@b.co" })
+  .withProfile((result) => ({ ownerEmail: result.email }));
+```
+
+This reads the synchronous `result` of kits already applied. It is only meaningful when the data it reads has already been produced synchronously — which is the case for plain `TestKit`s, whose `with*` populates `result` in realtime.
+
+**Deferred — `runner.defer(async (kits) => payload)` (async kits).** An `AsyncTestKit`'s `result` isn't populated until the runner flushes it (`await runner.run()`), so the eager form would read empty data. `runner.defer()` instead delays the `with*` call to resolve-time, after dependencies have been built, and hands the callback the runner's `testKitsMap` so it can `await` any kit's resolved `value`:
+
+```typescript
+runner.withAttachment("att_99").withConversation(
+  runner.defer(async (kits) => ({
+    linkedAttachmentId: (await kits.AttachmentKit.value).attachmentId,
+  })),
+);
+
+const result = await runner.run(); // conversation seeded with the resolved attachment id
+```
+
+Notes:
+
+- **Async-only.** `runner.defer()` is only valid on an `AsyncTestKit`'s `with*`. Passing the result to a synchronous kit's `with*` throws — use the eager `(result) => payload` form there instead.
+- **Await, don't read.** Inside the callback, read dependencies via `await kits.X.value` (the memoized async result), never `kits.X.result` (which may not be settled yet). Ordering self-organizes: each kit's `build()`/deferred callback awaits what it needs.
+- **Typed kit access requires a literal `name`.** For `kits.X` to resolve to a specific kit (rather than a union of all kits), the kit's `name` getter must be typed as a string literal — `get name(): "AttachmentKit"` — as the codebase already does by convention.
+- **Deferred overrides eager on the same kit.** A deferred call is applied at resolve-time, after every chain-time call, so `withX(payload).withX(defer(cb))` (and the reverse order) both end with the deferred value — the deferred payload always wins.
+- **No cycle detection.** If two kits' deferred callbacks mutually `await` each other's `.value`, the flush hangs with no error. Keep the dependency graph acyclic.
+
 ## 🏗️ **Architecture**
 
 The hive package provides a **dependency-aware testing framework** where:
