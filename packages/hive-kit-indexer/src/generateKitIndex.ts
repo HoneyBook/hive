@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Project } from "ts-morph";
-import { detectKits } from "./detectKits";
-import { detectRunners } from "./detectRunners";
-import { discoverSourceFiles } from "./discoverSourceFiles";
-import type { KitIndex, KitIndexOptions } from "./types";
+import { detectKits } from "./detectKits.js";
+import { detectRunners } from "./detectRunners.js";
+import { discoverSourceFiles } from "./discoverSourceFiles.js";
+import type { KitIndex, KitIndexOptions } from "./types.js";
 
 /**
  * Generates the kit-index for a single package directory.

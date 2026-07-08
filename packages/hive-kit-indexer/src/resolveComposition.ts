@@ -11,8 +11,8 @@ import {
   type NewExpression,
   type SourceFile,
 } from "ts-morph";
-import { isTestKitClass } from "./detectKits";
-import type { KitIndex } from "./types";
+import { isTestKitClass } from "./detectKits.js";
+import type { KitIndex } from "./types.js";
 
 /**
  * Resolves the declarations behind a node's symbol, following an import
@@ -103,6 +103,12 @@ function expandReference(
         const unwrapped = unwrapExpr(init);
         if (Node.isArrayLiteralExpression(unwrapped)) {
           expandKitExpression(unwrapped, paramNames, out, seen);
+          return;
+        }
+        if (Node.isCallExpression(unwrapped) && isKnownMergeHelperCall(unwrapped)) {
+          for (const arg of unwrapped.getArguments()) {
+            expandKitExpression(arg, paramNames, out, seen);
+          }
           return;
         }
       }
@@ -288,6 +294,46 @@ function extractFactoryFromDeclaration(decl: Node): FactoryDeclaration | undefin
   return undefined;
 }
 
+/**
+ * A declaration's own exported name — independent of any local import alias
+ * the call site used. Needed because a cross-package wrapped-runner lookup
+ * must match the wrapped package's own `dist/kit-index.json`, which is
+ * keyed by the factory's real name, not whatever alias the caller imported
+ * it under (`import { createTemporalTestRunner as createHiveTemporalTestRunner }`).
+ */
+function getDeclaredName(decl: Node): string | undefined {
+  if (Node.isFunctionDeclaration(decl) || Node.isVariableDeclaration(decl)) {
+    return decl.getName();
+  }
+  return undefined;
+}
+
+/**
+ * Hive-provided kit-merging primitives whose call arguments should be
+ * unwrapped as kit references when they appear as a variable's initializer
+ * (e.g. `const kits = mergeTestKits(BASE_KITS, extraKits)`). A fixed
+ * allowlist rather than a generic "unwrap any called function's arguments"
+ * rule: mergeTestKits's own signature (`(...sources: TestKitClasses[]) =>
+ * MergedTestKits`) guarantees every argument IS a kit-classes array, so
+ * unwrapping it carries no false-positive risk the way unwrapping an
+ * arbitrary unrelated helper call would.
+ */
+const KNOWN_MERGE_HELPER_NAMES = new Set(["mergeTestKits"]);
+
+function isKnownMergeHelperCall(call: CallExpression): boolean {
+  const calleeExpr = call.getExpression();
+  if (!Node.isIdentifier(calleeExpr)) {
+    return false;
+  }
+  if (KNOWN_MERGE_HELPER_NAMES.has(calleeExpr.getText())) {
+    return true;
+  }
+  return resolveDeclarations(calleeExpr).some((decl) => {
+    const name = getDeclaredName(decl);
+    return name !== undefined && KNOWN_MERGE_HELPER_NAMES.has(name);
+  });
+}
+
 const MAX_COMPOSITION_DEPTH = 10;
 
 function resolve(decl: FactoryDeclaration, depth: number, activePath: Set<Node>): string[] | null {
@@ -330,10 +376,14 @@ function resolve(decl: FactoryDeclaration, depth: number, activePath: Set<Node>)
 
     for (const decl2 of declarations) {
       const pkgInfo = resolvePackageRootFromNodeModulesPath(decl2.getSourceFile().getFilePath());
-      if (!pkgInfo || !calleeName) {
+      if (!pkgInfo) {
         continue;
       }
-      const wrapped = readWrappedRunnerEntry(pkgInfo.packageRoot, calleeName);
+      const realName = getDeclaredName(decl2) ?? calleeName;
+      if (!realName) {
+        continue;
+      }
+      const wrapped = readWrappedRunnerEntry(pkgInfo.packageRoot, realName);
       if (wrapped) {
         const withOwn = dedupeConcat(wrapped.forcedBaseKits, ownBodyKits);
         return dedupeConcat(withOwn, flattenCallArgs(call, paramNames));

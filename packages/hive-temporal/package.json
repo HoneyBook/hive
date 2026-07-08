@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-temporal",
-  "version": "0.1.0-beta.6",
+  "version": "0.1.0-beta.9",
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
     "registry": "https://npm.cloudsmith.io/honeybook/npmjs/"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -b tsconfig.build.json && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json && hive-kit-indexer",
+    "build": "rimraf dist && tsc -b tsconfig.build.json && tsc --project tsconfig.cjs.json && printf '{\"type\":\"commonjs\"}' > dist/cjs/package.json && node -e \"require('@honeybook/hive-kit-indexer').writeKitIndex()\"",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -28,8 +28,8 @@
   "dependencies": {
     "@honeybook/hive": "workspace:*",
     "@honeybook/hive-runner": "workspace:*",
-    "@temporalio/testing": "1.18.1",
-    "@temporalio/worker": "1.18.1"
+    "@temporalio/testing": "1.20.1",
+    "@temporalio/worker": "1.20.1"
   },
   "devDependencies": {
     "@honeybook/hive-kit-indexer": "workspace:*",

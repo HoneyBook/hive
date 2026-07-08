@@ -43,7 +43,7 @@ it("renders a component with providers and accesses kit data", async () => {
   const runner = createReactTestRunner([ProviderKit, UserKit]);
   // First kit in array is the outermost provider
   const result = runner.render(<div data-testid="target">Hello</div>);
-  expect(result.getByTestId("target").textContent).toBe("Hello");
+  expect(result.ui.getByTestId("target").textContent).toBe("Hello");
   await runner.run();
 });
 
@@ -61,10 +61,11 @@ it("renders a hook with typed result", async () => {
 - `REACT_BASE_KITS` — the base kit set injected into every React runner
 - `ReactBaseKits` — type of `REACT_BASE_KITS`
 - `ReactRenderMethods` — type of the `render`/`renderHook` methods added to the runner
+- `withBeforeRender` — chainable runner method registering a callback fired with the seeded `result` just before each `render`/`renderComponent`/`renderHook`; multiple calls accumulate in registration order
 - `createReactTestRunnerWithQueries` — factory variant accepting custom RTL queries
 - `generateProviderStack` — composes kit `Provider()`s into a nested provider tree
 - `IProviderTestKit` — interface a kit implements to contribute a provider
-- `ReactTestKit` — base kit that seeds RTL results into `runner.result`
+- `ReactTestKit` — base kit that seeds the RTL render result into `runner.result.ui`
 - `ReactTestKitWithQueries` — `ReactTestKit` variant carrying custom queries
 
 ## Peer Dependencies

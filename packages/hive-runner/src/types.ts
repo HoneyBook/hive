@@ -43,7 +43,12 @@ export type RunnerMethodMap<
  */
 export type AppRunnerWithExtraMethods<
   AllKitsClasses extends TestKitClasses,
-  ExtraMethods extends Record<string, (...args: any[]) => unknown>,
+  // Constraint is `object`, NOT Record<string, (...args) => unknown>. The index-signature
+  // form is what makes an empty `{}` (the value the ban forces callers to write to skip
+  // extra methods) INFER back to the index signature — silently readmitting any method name
+  // on the runner, the very footgun the ban closes. `object` infers `{}` as `{}`; the mapped
+  // type below already maps any non-function member to `never`, so no guarantee is lost.
+  ExtraMethods extends object,
   Handle extends object = Record<never, never>,
 > = AppRunnerWithChainableTestKitsMethods<
   AllKitsClasses,
@@ -76,59 +81,103 @@ type PlatformArgs<T> = [T] extends [never] ? [] : [arg?: T];
 type ResolveNever<T, Fallback extends object> = [T] extends [never] ? Fallback : T;
 
 /**
- * Typed factory shape for platform runners (React, Express, Temporal).
+ * The one shape every extra-methods record conforms to. Extracted so the
+ * ban-undefined overloads and every consumer reference a single canonical
+ * constraint instead of restating the index signature.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ExtraMethodsShape = Record<string, (...args: any[]) => unknown>;
+
+/**
+ * The full public runner type a factory returns for one call: the merged
+ * kit list's chainable runner (carrying the caller's extra methods and the
+ * platform Handle) intersected with the platform's fixed base methods.
+ *
+ * Extracted as a utility type so both RunnerFactory overloads — and any runner
+ * that can't use RunnerFactory directly (e.g. createReactTestRunnerWithQueries,
+ * which needs a per-call custom-query generic) — express their return and
+ * ThisType targets identically, in one place.
+ *
+ * BaseKits and KitsClasses are combined via MergeTestKits, NOT
+ * `[...BaseKits, ...KitsClasses]`. This is what makes wrapping a wrapper (any
+ * number of layers deep) work: a wrapper factory that adds its own base kits and
+ * stays generic over caller-supplied extraKits needs to call ITS OWN base kits'
+ * methods from inside its own body, while extraKits is still an unresolved
+ * generic parameter. Flattening into one array first would make that lookup fail
+ * — see MergedTestKits in @honeybook/hive. KitsClasses may itself already be a
+ * MergedTestKits (from an outer wrapper layer) — MergeTestKits flattens rather
+ * than nesting, so depth is unlimited and every layer uses the identical
+ * composition.
+ *
+ * BaseMethods is threaded through AppRunnerWithExtraMethods's `Handle` position
+ * (intersected with any real execute-hook Handle), NOT intersected at the top
+ * level. Handle is intersected RAW into the runner — never mapped through
+ * RunnerMethodMap — so this preserves generic base-method signatures such as
+ * renderHook<Result, Props>(...) and `this['result']`-returning render methods
+ * exactly as a top-level intersection would (polymorphic `this` re-resolves to
+ * the full runner at every call site, so a kit-INDEPENDENT base-methods
+ * interface still yields the fully-merged result — which is what lets React use
+ * a FIXED RunnerFactory instantiation instead of a bespoke generic function).
+ * The reason it must go through Handle rather than the top level: Handle flows
+ * into the runner that every chained `with*()` call returns, so `render`/
+ * `renderHook`/`withBeforeRender` survive chaining (`runner.withX().render()`);
+ * a top-level intersection is dropped after the first `with*()`.
+ */
+export type RunnerResult<
+  BaseKits extends TestKitClasses,
+  KitsClasses extends TestKitClasses,
+  // `object`, not ExtraMethodsShape — see AppRunnerWithExtraMethods's ExtraMethods note.
+  ExtraMethods extends object,
+  Handle extends object = NoExecuteFn,
+  BaseMethods extends object = NoMethods,
+> = AppRunnerWithExtraMethods<
+  MergeTestKits<[BaseKits, KitsClasses]>,
+  ExtraMethods,
+  ResolveNever<Handle, Record<never, never>> & ResolveNever<BaseMethods, Record<never, never>>
+>;
+
+/**
+ * Typed factory shape for platform runners (React, Express, Temporal, …).
  *
  * BaseKits    = pre-seeded kit classes the factory always prepends (e.g. [typeof ReactTestKit])
- * ExecuteFn   = execute hook type, or NoExecuteFn if unused
- * BaseMethods = methods the factory always provides (render, renderHook, …)
- * PlatformArg = third factory param type, or never if unused
+ * Handle      = handle type merged onto the runner by an execute hook, or NoExecuteFn if unused
+ * BaseMethods = methods the factory always provides (render, renderHook, …), or NoMethods if none
+ * PlatformArg = trailing positional factory param type (e.g. getProviders, config), or never
  *
- * The return type is AppRunnerWithExtraMethods<MergeTestKits<[BaseKits, KitsClasses]>, ...>,
- * so runner.result includes both pre-seeded and user-provided kit results.
+ * Authored as TWO overloads to close the explicit-`undefined` footgun: TypeScript
+ * does NOT apply a generic parameter's default when a caller passes literal
+ * `undefined` for an optional argument — it resolves the parameter to its
+ * CONSTRAINT (an index signature) instead, silently admitting any method name on
+ * the runner (as dangerous as `any`). So `extraMethods` is not an optional
+ * generic-with-default on one signature; it is:
+ *   1. absent entirely (kits-only overload) → ExtraMethods is the empty record, or
+ *   2. REQUIRED (extraMethods+rest overload) → pass `{}` to skip it.
+ * `create(kits, undefined)` matches neither overload — a hard compile error, by design.
  *
- * BaseKits and KitsClasses are combined via MergeTestKits, NOT `[...BaseKits, ...KitsClasses]`.
- * This is what makes wrapping a wrapper (any number of layers deep) work: a wrapper factory
- * that adds its own base kits and stays generic over caller-supplied extraKits needs to call
- * ITS OWN base kits' methods from inside its own body, while extraKits is still an unresolved
- * generic parameter. Flattening into one array first would make that lookup fail — see
- * MergedTestKits in @honeybook/hive for the full mechanism. KitsClasses may itself already be
- * a MergedTestKits (passed down from an outer wrapper layer) — MergeTestKits flattens rather
- * than nesting, so depth is unlimited and every layer uses the identical composition.
+ * Author a runner by annotating a const with this type; the arrow's params take
+ * loose types (the body casts through `as any` into createBaseTestRunner) because
+ * contextual typing does not flow from an overloaded type into an arrow's params:
  *
- * BaseMethods are intersected DIRECTLY into the return type (not through
- * RunnerMethodMap / AppRunnerWithExtraMethods). This preserves generic
- * method signatures such as renderHook<Result, Props>(...).
+ *   export const createXTestRunner: RunnerFactory<XBaseKits, XHandle, NoMethods, never> =
+ *     (kits: TestKitClasses, extraMethods?: ExtraMethodsShape, ...rest: unknown[]) => { … as any };
  */
 export type RunnerFactory<
   BaseKits extends TestKitClasses,
-  ExecuteFn extends object = NoExecuteFn,
-  BaseMethods extends object = Record<never, never>,
+  Handle extends object = NoExecuteFn,
+  BaseMethods extends object = NoMethods,
   PlatformArg = never,
-> = <
-  KitsClasses extends TestKitClasses,
-  // Defaults directly to Record<never, never> (not NoMethods/never + ResolveNever) —
-  // ExtraMethods is inferred per-call from the extraMethods argument, and feeding a
-  // conditional type built FROM ExtraMethods back into that same argument's ThisType
-  // silently defeats bidirectional inference (TS falls back to the default instead of
-  // inferring from the object literal, with no compile error). ExecuteFn/BaseMethods
-  // don't have this problem — they're fixed by the named factory's own RunnerFactory<...>
-  // instantiation, not inferred per end-caller.
-  ExtraMethods extends Record<string, (...args: any[]) => unknown> = Record<never, never>,
->(
-  kits: KitsClasses,
-  extraMethods?: ExtraMethods &
-    ThisType<
-      AppRunnerWithExtraMethods<
-        MergeTestKits<[BaseKits, KitsClasses]>,
-        ExtraMethods,
-        ResolveNever<ExecuteFn, Record<never, never>>
-      > &
-        ResolveNever<BaseMethods, Record<never, never>>
-    >,
-  ...rest: PlatformArgs<PlatformArg>
-) => AppRunnerWithExtraMethods<
-  MergeTestKits<[BaseKits, KitsClasses]>,
-  ExtraMethods,
-  ResolveNever<ExecuteFn, Record<never, never>>
-> &
-  ResolveNever<BaseMethods, Record<never, never>>;
+> = {
+  // Kits-only: ExtraMethods is the empty record; no extraMethods or platform arg reachable.
+  <KitsClasses extends TestKitClasses>(
+    kits: KitsClasses,
+  ): RunnerResult<BaseKits, KitsClasses, Record<never, never>, Handle, BaseMethods>;
+  // extraMethods REQUIRED (no `?`) — inferred from the object literal, with `this` bound to
+  // the full runner. Platform arg (if any) is optional after it. Explicit `undefined` for
+  // extraMethods matches neither overload.
+  <KitsClasses extends TestKitClasses, ExtraMethods extends object>(
+    kits: KitsClasses,
+    extraMethods: ExtraMethods &
+      ThisType<RunnerResult<BaseKits, KitsClasses, ExtraMethods, Handle, BaseMethods>>,
+    ...rest: PlatformArgs<PlatformArg>
+  ): RunnerResult<BaseKits, KitsClasses, ExtraMethods, Handle, BaseMethods>;
+};
