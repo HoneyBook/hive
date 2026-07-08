@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
   build-verification:
@@ -59,13 +59,28 @@ jobs:
       - run: pnpm run build
       - run: pnpm --filter "${{ matrix.package }}" test
 
+  semantic-pr-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: read
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          requireScope: false
+
   ci-gate:
     runs-on: ubuntu-latest
-    needs: [build-verification, test-verification]
+    needs: [build-verification, test-verification, semantic-pr-check]
     if: always()
     steps:
       - name: Verify all checks passed
         run: |
           if [ "${{ needs.build-verification.result }}" != "success" ] || [ "${{ needs.test-verification.result }}" != "success" ]; then
+            exit 1
+          fi
+          if [ "${{ github.event_name }}" == "pull_request" ] && [ "${{ needs.semantic-pr-check.result }}" != "success" ]; then
             exit 1
           fi

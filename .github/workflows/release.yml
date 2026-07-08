@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.HIVE_RELEASE_APP_ID != '' && secrets.HIVE_RELEASE_APP_PRIVATE_KEY != '' }}
+    steps:
+      - name: Mint GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HIVE_RELEASE_APP_ID }}
+          private-key: ${{ secrets.HIVE_RELEASE_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ steps.app-token.outputs.token }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Configure Cloudsmith auth
+        run: echo "//npm.cloudsmith.io/honeybook/npmjs/:_authToken=${CLOUDSMITH_API_KEY}" >> ~/.npmrc
+        env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+      - run: pnpm install
+      - name: Skip release when only ignored paths changed
+        id: guard
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          REMAINING=$(echo "$CHANGED" | grep -vE '(\.test\.ts$|/__tests__/|\.md$)' || true)
+          if [ -z "$REMAINING" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Build
+        if: steps.guard.outputs.skip != 'true'
+        run: pnpm run build
+      - name: Release
+        if: steps.guard.outputs.skip != 'true'
+        run: pnpm exec multi-semantic-release --ignore-private-packages --deps.bump=ignore --deps.release=ignore
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
