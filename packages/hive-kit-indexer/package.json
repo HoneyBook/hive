@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-kit-indexer",
-  "version": "0.1.0-beta.8",
+  "version": "0.1.0",
   "description": "Generates a kit-index.json manifest of a hive package's TestKit/AsyncTestKit subclasses, their with* methods, and runner forced-base-kits — for downstream consumers like skill-ladder generators.",
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
