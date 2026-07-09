@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-express",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Express test runner for hive — supertest-backed request test kit.",
   "license": "UNLICENSED",
   "repository": {
