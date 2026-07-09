@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-temporal",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Temporal test runner for hive — TestWorkflowEnvironment-backed worker/workflow test kit.",
   "license": "UNLICENSED",
   "repository": {
