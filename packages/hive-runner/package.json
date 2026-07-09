@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-runner",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Platform-agnostic base test runner for hive test kits — memoized run(), exemplar composition.",
   "license": "UNLICENSED",
   "repository": {
