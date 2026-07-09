@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React test runner for hive — render/renderHook/renderComponent, provider-stack composition.",
   "license": "UNLICENSED",
   "repository": {
