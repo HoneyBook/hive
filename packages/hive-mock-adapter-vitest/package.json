@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-mock-adapter-vitest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Vitest plugin for hive-mock-adapter — vi.spyOn-backed mock substitution.",
   "license": "UNLICENSED",
   "repository": {
