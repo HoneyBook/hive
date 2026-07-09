@@ -8,6 +8,7 @@
     [
       "@semantic-release/exec",
       {
+        "prepareCmd": "node \"$(git rev-parse --show-toplevel)/scripts/restore-workspace-protocol.js\"",
         "publishCmd": "pnpm publish --no-git-checks --registry https://npm.cloudsmith.io/honeybook/npmjs/"
       }
     ],
