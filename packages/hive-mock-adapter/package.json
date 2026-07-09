@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-mock-adapter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Framework-agnostic mock adapter core for hive — pluggable spy injection, mock registry, cleanup.",
   "license": "UNLICENSED",
   "repository": {
