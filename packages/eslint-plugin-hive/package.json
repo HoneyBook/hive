@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/eslint-plugin-hive",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ESLint rules enforcing hive's MockAdapter pattern over raw jest/vitest mocking APIs",
   "license": "UNLICENSED",
   "repository": {
