@@ -1,6 +1,13 @@
 {
   "name": "@honeybook/hive-mock-adapter-vitest",
   "version": "0.1.0",
+  "description": "Vitest plugin for hive-mock-adapter — vi.spyOn-backed mock substitution.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HoneyBook/hive.git",
+    "directory": "packages/hive-mock-adapter-vitest"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

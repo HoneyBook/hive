@@ -1,6 +1,13 @@
 {
   "name": "@honeybook/hive-express",
   "version": "0.1.0",
+  "description": "Express test runner for hive — supertest-backed request test kit.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HoneyBook/hive.git",
+    "directory": "packages/hive-express"
+  },
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",

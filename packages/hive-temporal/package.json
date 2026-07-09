@@ -1,6 +1,13 @@
 {
   "name": "@honeybook/hive-temporal",
   "version": "0.1.0",
+  "description": "Temporal test runner for hive — TestWorkflowEnvironment-backed worker/workflow test kit.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HoneyBook/hive.git",
+    "directory": "packages/hive-temporal"
+  },
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
