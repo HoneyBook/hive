@@ -19,7 +19,9 @@ let changed = false;
 
 for (const field of depFields) {
   const deps = pkg[field];
-  if (!deps) continue;
+  if (!deps) {
+    continue;
+  }
   for (const [name, version] of Object.entries(deps)) {
     if (name.startsWith("@honeybook/") && version !== "workspace:*") {
       deps[name] = "workspace:*";
