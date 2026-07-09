@@ -1,6 +1,13 @@
 {
   "name": "@honeybook/hive-runner",
   "version": "0.1.0",
+  "description": "Platform-agnostic base test runner for hive test kits — memoized run(), exemplar composition.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HoneyBook/hive.git",
+    "directory": "packages/hive-runner"
+  },
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",

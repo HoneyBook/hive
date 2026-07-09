@@ -1,6 +1,13 @@
 {
   "name": "@honeybook/hive-mock-adapter",
   "version": "0.1.0",
+  "description": "Framework-agnostic mock adapter core for hive — pluggable spy injection, mock registry, cleanup.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HoneyBook/hive.git",
+    "directory": "packages/hive-mock-adapter"
+  },
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",

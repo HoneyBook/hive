@@ -2,6 +2,12 @@
   "name": "@honeybook/hive-kit-indexer",
   "version": "0.1.0",
   "description": "Generates a kit-index.json manifest of a hive package's TestKit/AsyncTestKit subclasses, their with* methods, and runner forced-base-kits — for downstream consumers like skill-ladder generators.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HoneyBook/hive.git",
+    "directory": "packages/hive-kit-indexer"
+  },
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",

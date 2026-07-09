@@ -1,6 +1,13 @@
 {
   "name": "@honeybook/hive-react",
   "version": "0.1.0",
+  "description": "React test runner for hive — render/renderHook/renderComponent, provider-stack composition.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HoneyBook/hive.git",
+    "directory": "packages/hive-react"
+  },
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
