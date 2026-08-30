@@ -1,3 +1,13 @@
+# @honeybook/hive-mock-adapter-vitest [0.2.0](https://github.com/HoneyBook/hive/compare/@honeybook/hive-mock-adapter-vitest@0.1.1...@honeybook/hive-mock-adapter-vitest@0.2.0) (2026-08-30)
+
+### Features
+
+- **mock-adapter:** let a consumer choose what cleanup does between tests ([#25](https://github.com/HoneyBook/hive/issues/25)) ([b7c0abe](https://github.com/HoneyBook/hive/commit/b7c0abe5d0f741fd98fbf19b88c214bce1e61c73))
+
+### Dependencies
+
+- **@honeybook/hive-mock-adapter:** upgraded to 0.2.0
+
 ## @honeybook/hive-mock-adapter-vitest [0.1.1](https://github.com/HoneyBook/hive/compare/@honeybook/hive-mock-adapter-vitest@0.1.0...@honeybook/hive-mock-adapter-vitest@0.1.1) (2026-07-09)
 
 ### Bug Fixes
