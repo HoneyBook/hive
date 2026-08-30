@@ -52,6 +52,44 @@ it("captures state across singleton instances", () => {
 });
 ```
 
+## Cleanup between tests
+
+`cleanupMockAdapters()` runs between tests. What it does to an adapter depends on the
+`cleanup` option you passed to `MockAdapter`.
+
+|                          | `"reset"` (default)       | `"recreate"`                           |
+| ------------------------ | ------------------------- | -------------------------------------- |
+| The instance             | kept                      | dropped; next `new` builds a fresh one |
+| State                    | whatever `reset()` clears | gone with the object                   |
+| Spies a test planted     | **survive**               | gone with the object                   |
+| Needs a `reset()` method | yes                       | no                                     |
+
+**Use `"reset"` when something captures the instance once** — most commonly a
+module-level `export const adapter = new Adapter()`. Dropping the instance would leave
+that export pointing at a dead object forever, because nothing re-runs `new`.
+
+**Use `"recreate"` when a kit or factory constructs the adapter per test.** Nothing holds
+a long-lived reference, so a fresh object each test is safe — and it means a test can't
+leak into the next one.
+
+That last row is the part worth reading twice. `reset()` clears the fields you list in it.
+It cannot clear spies, because spies aren't fields. So under `"reset"`, this leaks:
+
+```ts
+it("one", () => {
+  spy(adapter, "fetch").mockResolvedValue(somethingSpecific); // no `Once`
+});
+
+it("two", () => {
+  // `fetch` still returns somethingSpecific
+});
+```
+
+`clearMocks` does not save you — it clears call history, not implementations. If your
+tests stub through spies under `"reset"`, use `restoreMocks`, or the one-shot
+`mockResolvedValueOnce`. Under `"recreate"` the problem doesn't arise: the object the spy
+lived on is gone.
+
 ## API
 
 - `MockAdapter` — wraps a class as a transparent spied singleton; takes `{ spy }`

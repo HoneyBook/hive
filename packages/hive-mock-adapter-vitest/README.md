@@ -91,7 +91,9 @@ it("has spied greet method", () => {
 
 ## API
 
-- `MockAdapter(Base)` — wraps a class as a singleton with auto-spy on all methods except `reset`
+- `MockAdapter(Base, options?)` — wraps a class as a singleton with auto-spy on all methods except `reset`
+  - `options.cleanup: "reset"` (default) — keep the instance between tests and call `reset()` on it. For an adapter something holds a long-lived reference to, e.g. a module-level `export const adapter = new Adapter()`.
+  - `options.cleanup: "recreate"` — drop the instance so the next `new` builds and re-spies a fresh one. For an adapter a kit or factory constructs per test. Needs no `reset()` method, and a spy a test planted cannot leak into the next test.
 - `mockSubstitutionPlugin(opts)` — Vite/Vitest plugin for automatic `.mock.ts` substitution
 - `siblingMockResolver(path)` — resolves `foo.ts` → `foo.mock.ts`
 - `mocksDirResolver(path)` — resolves `foo.ts` → `__mocks__/foo.ts`
