@@ -1,6 +1,6 @@
 {
   "name": "@honeybook/hive-mock-adapter-jest",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Jest plugin for hive-mock-adapter — jest.spyOn-backed mock substitution.",
   "license": "UNLICENSED",
   "repository": {
