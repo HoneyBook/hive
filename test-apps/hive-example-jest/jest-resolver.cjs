@@ -1,4 +1,7 @@
-const { siblingMockResolver, mocksDirResolver } = require("@honeybook/hive-mock-adapter-jest");
+const {
+  siblingMockResolver,
+  mocksDirResolver,
+} = require("@honeybook/hive-mock-adapter-jest/resolvers");
 
 module.exports = function (request, options) {
   const real = options.defaultResolver(request, options);
