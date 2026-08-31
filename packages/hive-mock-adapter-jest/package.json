@@ -23,6 +23,11 @@
       "require": "./dist/cjs/src/setup.js",
       "types": "./dist/src/setup.d.ts"
     },
+    "./resolvers": {
+      "import": "./dist/resolvers.js",
+      "require": "./dist/cjs/resolvers.js",
+      "types": "./dist/resolvers.d.ts"
+    },
     "./resolver": "./resolver.cjs"
   },
   "files": [
