@@ -12,6 +12,9 @@ import { MockActivityEnvironment } from "@temporalio/testing";
 import type { TestWorkflowEnvironment } from "@temporalio/testing";
 import { TemporalTestKit } from "./TemporalTestKit.test-kit";
 import { TemporalConfigTestKit } from "./TemporalConfigTestKit.test-kit";
+import { registerHook } from "./hooks";
+import { replayHistories } from "./replay";
+import type { ReplayHistoriesOptions, ReplayHistoryInput } from "./replay";
 
 export const TEMPORAL_BASE_KITS = [TemporalTestKit, TemporalConfigTestKit] as const;
 export type TemporalBaseKits = typeof TEMPORAL_BASE_KITS;
@@ -25,6 +28,13 @@ export type TemporalHandle = {
     fn: F,
     input: Parameters<F>[0],
   ) => Promise<Awaited<ReturnType<F>>>;
+  // Replays histories (objects, or JSON file paths) against this runner's workflow code —
+  // `withWorkflowsPath` / `withWorkflowBundle` — unless `options` supplies other code. Throws
+  // naming each failing workflow id and its cause (e.g. non-determinism).
+  replayHistories: (
+    histories: Array<ReplayHistoryInput | string>,
+    options?: Partial<ReplayHistoriesOptions>,
+  ) => Promise<{ replayed: number }>;
 };
 
 export type TemporalRunnerConfig = {
@@ -56,9 +66,10 @@ export const createTemporalTestRunner: RunnerFactory<
 > = (kits: TestKitClasses, extraMethods?: ExtraMethodsShape, config?: TemporalRunnerConfig) => {
   const allKits = [TemporalTestKit, TemporalConfigTestKit, ...kits];
 
-  // onReset auto-registered at construction time via jest beforeEach global.
+  // onReset auto-registered at construction time via the beforeEach hook
+  // (jest / vitest globals, or configureTemporalTestHooks).
   if (config?.onReset) {
-    beforeEach(config.onReset);
+    registerHook("beforeEach", config.onReset, undefined, true);
   }
 
   // Object-literal context is required for ThisType<> to apply contextual this-typing
@@ -99,7 +110,7 @@ export const createTemporalTestRunner: RunnerFactory<
           activities: mainActivities,
         });
         void worker.run().catch(console.error);
-        afterAll(() => worker.shutdown());
+        registerHook("afterAll", () => worker.shutdown(), undefined, true);
       }
 
       if (hasChild && childTaskQueue) {
@@ -115,7 +126,7 @@ export const createTemporalTestRunner: RunnerFactory<
           activities: {},
         });
         void childWorker.run().catch(console.error);
-        afterAll(() => childWorker.shutdown());
+        registerHook("afterAll", () => childWorker.shutdown(), undefined, true);
       }
 
       const handle: TemporalHandle = {
@@ -131,6 +142,15 @@ export const createTemporalTestRunner: RunnerFactory<
             workflowExecution: { workflowId: "test-wf", runId: "test-run" },
           });
           return env.run(fn, input) as Promise<Awaited<ReturnType<F>>>;
+        },
+        replayHistories: (histories, options) => {
+          const source =
+            options?.workflowBundle != null || options?.workflowsPath != null
+              ? {}
+              : cfg.workflowBundle
+                ? { workflowBundle: cfg.workflowBundle }
+                : { workflowsPath: cfg.workflowsPath as string };
+          return replayHistories(histories, { ...options, ...source } as ReplayHistoriesOptions);
         },
       };
 

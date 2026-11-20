@@ -107,3 +107,11 @@ describe("createTemporalTestRunner — integration", () => {
     expect(result).toBe("Child says: Hello, Bundle!");
   });
 });
+
+describe("default environment", () => {
+  it("is time-skipping unless the test file opts into another with withEnvironment", async () => {
+    const runner = createTemporalTestRunner([]);
+    await runner.run();
+    expect(runner.testEnv.supportsTimeSkipping).toBe(true);
+  });
+});
